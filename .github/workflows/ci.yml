@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Tests
+        run: node --test
+      - name: Every planted fault is caught
+        run: node bin/proof-matrix.mjs --check
+      - name: Every contract line is proven
+        run: node bin/contract-check.mjs
+      - name: Plugin hooks match the table
+        run: node bin/gen-plugin-hooks.mjs --check
+      - name: Demo runs clean
+        run: node demo/run.mjs
+      - name: No test that could never fail
+        run: node bin/find-vacuous-tests.mjs

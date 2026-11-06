@@ -1,7 +1,7 @@
 # agent-guardrails
 
 ![Node 18.11 or newer](https://img.shields.io/badge/node-%3E%3D18.11-3c873a) ![No dependencies](https://img.shields.io/badge/dependencies-0-2f6feb) ![MIT license](https://img.shields.io/badge/license-MIT-2f6feb) ![Planted faults](https://img.shields.io/badge/planted%20faults-190-2f6feb)
-<!-- ci-badge -->
+[![CI](https://github.com/zacharyoliver-ai/agent-guardrails/actions/workflows/ci.yml/badge.svg)](https://github.com/zacharyoliver-ai/agent-guardrails/actions/workflows/ci.yml)
 
 Hooks and command-line tools for running many AI coding agents at once, with a planted bug behind every guard to show it works.
 
