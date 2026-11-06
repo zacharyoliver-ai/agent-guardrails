@@ -86,6 +86,43 @@ test('collectMinutes sums jobs, caches finished runs and stops at --max-runs', (
   assert.equal(capped.used, 1);
 });
 
+test('billableMinutes multiplies Windows by 2 and macOS by 10, from the job labels', () => {
+  const withLabels = (labels) => ({ ...job(61), labels });
+  assert.equal(billableMinutes([withLabels(['ubuntu-latest'])]), 2);
+  assert.equal(billableMinutes([withLabels(['windows-latest'])]), 4);
+  assert.equal(billableMinutes([withLabels(['macos-14'])]), 20);
+  assert.equal(billableMinutes([withLabels(['self-hosted', 'Windows', 'X64'])]), 4);
+  assert.equal(billableMinutes([job(61)]), 2);
+});
+
+test('collectMinutes asks one day at a time, counts a run once, and asks for every attempt', () => {
+  const calls = [];
+  const runner = (args) => {
+    calls.push(args[2]);
+    if (args[2].includes('/jobs')) return JSON.stringify({ jobs: [job(60)] });
+    const day = /created=([\d-]+)/.exec(args[2])[1];
+    return JSON.stringify({ workflow_runs: day === '2026-03-02' ? [{ id: 7, status: 'completed' }, { id: 8, status: 'completed' }] : [{ id: 7, status: 'completed' }] });
+  };
+  const r = collectMinutes({ repo: 'o/r', runner, monthStart: '2026-03-01', lastDay: '2026-03-03' });
+  const searches = calls.filter((c) => c.includes('/actions/runs?'));
+  assert.deepEqual(searches.map((c) => /created=([\d-]+)/.exec(c)[1]), ['2026-03-01', '2026-03-02', '2026-03-03']);
+  assert.ok(searches.every((c) => !c.includes('>=')));
+  assert.equal(r.runs, 2);
+  assert.equal(r.used, 2);
+  const jobCalls = calls.filter((c) => c.includes('/jobs'));
+  assert.equal(jobCalls.length, 2);
+  assert.ok(jobCalls.every((c) => c.includes('filter=all')));
+});
+
+test('CLI says when the repository is public, and stays quiet when it is private or unknown', () => {
+  const now = new Date('2026-03-02T12:00:00Z');
+  const withRepo = (priv) => (args) => (args[1] === 'repos/o/r' ? JSON.stringify({ private: priv }) : JSON.stringify({ workflow_runs: [] }));
+  const pub = cli(['--repo', 'o/r', '--cap', '2000'], withRepo(false), now);
+  assert.match(pub.out, /public/);
+  assert.equal(JSON.parse(cli(['--repo', 'o/r', '--cap', '2000', '--json'], withRepo(false), now).out).public, true);
+  assert.doesNotMatch(cli(['--repo', 'o/r', '--cap', '2000'], withRepo(true), now).out, /public/);
+});
+
 function cli(argv, runner, now) {
   const out = [];
   const err = [];

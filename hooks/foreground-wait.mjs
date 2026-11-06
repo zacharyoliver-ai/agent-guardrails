@@ -1,17 +1,24 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { isMain, run } from '../lib/hook-io.mjs';
-import { simpleCommands } from '../lib/shell.mjs';
+import { simpleCommands, withoutInput } from '../lib/shell.mjs';
 
 const WRAPPERS = new Set(['npx', 'time', 'nohup', 'exec', 'command', 'sudo', 'nice', 'env']);
 // Flags of test runners that take a value, so the value is not mistaken for a file.
 const VALUE_FLAGS = new Set([
   '-k', '-m', '-n', '-g', '-j', '-p', '-c', '--project', '--grep', '--reporter', '--workers',
   '--config', '--timeout', '--retries', '--shard', '--test-name-pattern', '--test-reporter',
-  '--test-concurrency', '--test-timeout', '--import', '--require', '--env-file',
+  '--test-concurrency', '--test-timeout', '--test-skip-pattern', '--test-reporter-destination',
+  '--import', '--require', '-r', '--loader', '--experimental-loader', '--env-file',
 ]);
 const GLOB = /[*?[{]/;
-const SOURCE_FILE = /\.\w+(?:::.*)?$/;
+// A name ending in an extension, with an optional :line, :line:col or pytest ::test suffix.
+const SOURCE_FILE = /\.\w+(?::\d+(?::\d+)?|::.*)?$/;
+const SHELL_VAR = /^\$(?:\w+|\{\w+\})$/;
+// Words that name a whole folder of tests, not a file.
+const BROAD_FILTERS = new Set(['.', 'test', 'tests', 'e2e', 'spec', 'specs']);
+// Known limit: a variable counts as one file, because its value is unknown.
+const isGlob = (f) => GLOB.test(f.replace(/\$\{\w+\}/g, ''));
 
 /** Drops launcher words (npx, time, timeout 60, ...) so the real command comes first. */
 function unwrap(words) {
@@ -40,11 +47,28 @@ function positionals(args) {
   return out;
 }
 
+/** True when --test is node's own flag. After the script it is the script's argument, as in planted-fault --test. */
+function nodeTestRun(args) {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--test') return true;
+    if (VALUE_FLAGS.has(args[i])) i++;
+    else if (!args[i].startsWith('-')) return false;
+  }
+  return false;
+}
+
 /** True when the arguments name one to three concrete files, so the run is short. */
 function fewFiles(args) {
   const files = positionals(args);
   if (files.length < 1 || files.length > 3) return false;
-  return files.every((f) => !GLOB.test(f) && SOURCE_FILE.test(f));
+  return files.every((f) => !isGlob(f) && (SOURCE_FILE.test(f) || SHELL_VAR.test(f)));
+}
+
+/** True for one to three file-name filters (Playwright, Jest and Vitest match them as part of a name). */
+function fewFilters(args) {
+  const filters = positionals(args);
+  if (filters.length < 1 || filters.length > 3) return false;
+  return filters.every((f) => !isGlob(f) && !/[\\/]$/.test(f) && !BROAD_FILTERS.has(f));
 }
 
 const seconds = (arg) => {
@@ -54,12 +78,12 @@ const seconds = (arg) => {
 
 /** Returns a short description of the long run this command starts, or null. */
 export function longRun(words) {
-  const w = unwrap(words);
+  const w = unwrap(withoutInput(words));
   const [cmd, a = '', b = ''] = w;
   if (!cmd) return null;
   const rest = w.slice(1);
 
-  if (rest.some((x) => x === '--watch' || x.startsWith('--watch='))) return 'a watcher (--watch)';
+  if (rest.some((x) => x === '--watch' || (x.startsWith('--watch=') && !/^--watch=(?:false|0)$/.test(x)))) return 'a watcher (--watch)';
   if (cmd === 'tail' && rest.some((x) => x === '--follow' || /^-[a-zA-Z0-9]*[fF][a-zA-Z0-9]*$/.test(x))) return 'tail -f';
   if (cmd === 'sleep' && rest.reduce((sum, x) => sum + seconds(x), 0) >= 30) return 'a sleep of 30 seconds or more';
 
@@ -76,8 +100,13 @@ export function longRun(words) {
   }
   if (cmd === 'go' && a === 'test') return rest.some((x) => x === './...' || x.endsWith('/...')) ? 'go test ./...' : null;
   if (cmd === 'cargo' && (a === 'test' || a === 'build')) return `cargo ${a}`;
-  if (cmd === 'node' && rest.includes('--test')) return fewFiles(rest.filter((x) => x !== '--test')) ? null : 'a node --test run over many files';
-  if (cmd === 'playwright' && a === 'test') return fewFiles(w.slice(2)) ? null : 'a full playwright run';
+  if (cmd === 'node' && nodeTestRun(rest)) return fewFiles(rest.filter((x) => x !== '--test')) ? null : 'a node --test run over many files';
+  if (cmd === 'playwright' && a === 'test') return fewFilters(w.slice(2)) ? null : 'a full playwright run';
+  if (cmd === 'jest' || cmd === 'vitest') {
+    const args = cmd === 'vitest' && a === 'run' ? w.slice(2) : rest;
+    if (args.some((x) => ['--version', '-v', '--help', '-h'].includes(x))) return null;
+    return fewFilters(args) ? null : `a full ${cmd} run`;
+  }
   if ((cmd === 'vite' || cmd === 'next') && a === 'build') return `${cmd} build`;
   if (cmd === 'docker' && a === 'build') return 'docker build';
   if (cmd === 'tsc') {
@@ -111,7 +140,7 @@ function loadConfig(env) {
 
 /** Returns a deny reason, or null to allow. */
 export function check(input, env = process.env) {
-  if (input.tool_name !== 'Bash') return null;
+  if (input.tool_name !== 'Bash' && input.tool_name !== 'PowerShell') return null;
   const command = input.tool_input?.command;
   if (typeof command !== 'string' || input.tool_input.run_in_background === true) return null;
   const cfg = loadConfig(env);

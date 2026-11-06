@@ -6,8 +6,8 @@
     {
       "fault": "git add . is no longer treated as staging everything.",
       "file": "hooks/git-guard.mjs",
-      "find": "args.some((a) => a === '.' || a === '--all'",
-      "replace": "args.some((a) => a === '--all'",
+      "find": "paths.some((p) => SWEEP_PATHS.has(p)) || (sweepFlag",
+      "replace": "(sweepFlag",
       "test": "node --test test/git-guard.test.mjs"
     },
     {
@@ -25,10 +25,10 @@
       "test": "node --test test/git-guard.test.mjs"
     },
     {
-      "fault": "git stash pop is treated like a bare stash and refused.",
+      "fault": "The paths after git stash are not read, so git stash push src/a.js is refused like a bare stash.",
       "file": "hooks/git-guard.mjs",
-      "find": "args[0] === 'push' || args[0] === 'save'",
-      "replace": "args[0] === 'push' || args[0] === 'save' || args[0] === 'pop'",
+      "find": "namedPaths(args.slice(args[0] === 'push' ? 1 : 0),",
+      "replace": "namedPaths([],",
       "test": "node --test test/git-guard.test.mjs"
     },
     {
@@ -36,6 +36,97 @@
       "file": "hooks/git-guard.mjs",
       "find": "clusterBeforeValue(a, 'o').includes('f')",
       "replace": "clusterBeforeValue(a, 'o').includes('F')",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A launcher's flag values are no longer skipped, so the user name after sudo -u is read as the command and the git command behind it goes unchecked.",
+      "file": "hooks/git-guard.mjs",
+      "find": "i += spec.values.has(w) ? 2 : 1;",
+      "replace": "i += 1;",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "eval is no longer unpacked, so a command passed to eval goes unchecked.",
+      "file": "hooks/git-guard.mjs",
+      "find": "name === 'eval' && depth < 3",
+      "replace": "name === 'evalx' && depth < 3",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "The PowerShell tool is no longer inspected, so git add -A passes there.",
+      "file": "hooks/git-guard.mjs",
+      "find": "new Set(['Bash', 'PowerShell'])",
+      "replace": "new Set(['Bash'])",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "The checked-out branch is ignored, so a bare git push from main is allowed.",
+      "file": "hooks/git-guard.mjs",
+      "find": "&& /^(?:main|master)$/.test(currentBranch(cwd))",
+      "replace": "&& false",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "Every push without a refspec is treated as a push of the checked-out branch even when the refspec names another branch.",
+      "file": "hooks/git-guard.mjs",
+      "find": "(specs.length === 0 || specs.includes('HEAD'))",
+      "replace": "(true || specs.includes('HEAD'))",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A dry run of git clean is no longer recognised, so git clean -nfd is refused.",
+      "file": "hooks/git-guard.mjs",
+      "find": "if (args.some((a) => a === '--dry-run' || shortFlags(a).includes('n'))) return null;",
+      "replace": "if (false) return null;",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A sweep flag refuses every git add even when paths are named, so git add -A src/a.js is blocked.",
+      "file": "hooks/git-guard.mjs",
+      "find": "(sweepFlag && !paths.length)",
+      "replace": "sweepFlag",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "git add -u and -uv are no longer treated as a sweep of every tracked change.",
+      "file": "hooks/git-guard.mjs",
+      "find": "['A', 'u']",
+      "replace": "['A']",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A git stash with no named path is allowed, so git stash push sweeps up everyone's changes.",
+      "file": "hooks/git-guard.mjs",
+      "find": "args[0] === 'save' || !paths.length",
+      "replace": "args[0] === 'save'",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "git stash push . is allowed, because a whole-directory path is no longer seen as a sweep.",
+      "file": "hooks/git-guard.mjs",
+      "find": "!paths.length || paths.some((p) => SWEEP_PATHS.has(p))",
+      "replace": "!paths.length",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "The value of git stash -m is read as a path, so git stash push -m note passes as if it named a file.",
+      "file": "hooks/git-guard.mjs",
+      "find": "(a) => a === '--message' || /^-[A-Za-z]*m$/.test(a)",
+      "replace": "() => false",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A cd earlier in the command is ignored, so a bare push from a feature branch is judged by the session's folder.",
+      "file": "hooks/git-guard.mjs",
+      "find": "const reason = checkWords(words, cwd, env);\n    if (reason) return reason;\n  }\n  return null;\n}\n\nif (isMain",
+      "replace": "const reason = checkWords(words, input.cwd, env);\n    if (reason) return reason;\n  }\n  return null;\n}\n\nif (isMain",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "An input redirection reads as a named path, so git add -A </dev/null passes.",
+      "file": "hooks/git-guard.mjs",
+      "find": "let words = withoutInput(raw);",
+      "replace": "let words = raw;",
       "test": "node --test test/git-guard.test.mjs"
     }
   ]

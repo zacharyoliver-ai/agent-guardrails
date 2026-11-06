@@ -1,0 +1,28 @@
+{
+  "name": "replay",
+  "kind": "proof-tool",
+  "what": "Runs past session transcripts through the stateless guards and reports how many calls each would have denied, counting each tool call once.",
+  "faults": [
+    {
+      "fault": "Denies are never counted, so the report always says the guards would have done nothing.",
+      "file": "bin/replay.mjs",
+      "find": "guards[name].denied++;",
+      "replace": "",
+      "test": "node --test test/replay.test.mjs"
+    },
+    {
+      "fault": "A tool call id seen before is read again, so one call spread over several lines is counted twice.",
+      "file": "bin/replay.mjs",
+      "find": "if (seen.has(block.id)) continue;",
+      "replace": "",
+      "test": "node --test test/replay.test.mjs"
+    },
+    {
+      "fault": "The shown command is printed without masking, so a credential reaches the terminal.",
+      "file": "bin/replay.mjs",
+      "find": "const shown = mask(what.replace(/\\s+/g, ' ')).slice(0, 80);",
+      "replace": "const shown = what.replace(/\\s+/g, ' ').slice(0, 80);",
+      "test": "node --test test/replay.test.mjs"
+    }
+  ]
+}

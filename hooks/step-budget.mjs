@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isMain, run } from '../lib/hook-io.mjs';
+import { isMain, run, writeAtomic } from '../lib/hook-io.mjs';
 
 const READ_ONLY = new Set(['Read', 'Grep', 'Glob']);
 
@@ -37,9 +37,7 @@ export function checkStep(input, env = process.env) {
   }
 
   fs.mkdirSync(dir, { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(state));
-  fs.renameSync(tmp, file);
+  writeAtomic(file, JSON.stringify(state));
   return reason;
 }
 

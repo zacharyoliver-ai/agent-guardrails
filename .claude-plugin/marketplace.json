@@ -1,0 +1,12 @@
+{
+  "name": "agent-guardrails",
+  "description": "Guards, proof tools and agents for running many AI coding agents at once.",
+  "owner": { "name": "Oliver Labs LLC" },
+  "plugins": [
+    {
+      "name": "agent-guardrails",
+      "source": ".",
+      "description": "Hooks and tools for running many AI coding agents at once, with a planted bug behind every guard to show it works."
+    }
+  ]
+}

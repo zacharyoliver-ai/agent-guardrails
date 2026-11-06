@@ -130,3 +130,21 @@ test('not a repository is a usage error', () => {
   const r = spawnSync(process.execPath, [script, '--root', dir], { encoding: 'utf8', env: { ...env, GIT_CEILING_DIRECTORIES: path.dirname(dir) } });
   assert.equal(r.status, 2);
 });
+
+test('a worktree whose folder is gone shows as missing and the rest of the board still prints', () => {
+  const { root, lane } = makeRepo();
+  const gone = lane('gone');
+  const kept = lane('kept');
+  commit(kept, 'a.txt');
+  fs.rmSync(gone, { recursive: true, force: true });
+  const board = buildBoard(root);
+  const byLabel = Object.fromEntries(board.lanes.map((l) => [l.label, l]));
+  assert.equal(byLabel.gone.missing, true);
+  assert.deepEqual(byLabel.gone.files, []);
+  assert.equal(byLabel.kept.missing, undefined);
+  assert.deepEqual(byLabel.kept.files, ['a.txt']);
+  const r = spawnSync(process.execPath, [script, '--root', root], { encoding: 'utf8' });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /missing: the folder is gone/);
+  assert.match(r.stdout, /changed \(1\): a\.txt/);
+});

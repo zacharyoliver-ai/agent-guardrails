@@ -42,6 +42,15 @@ test('Bash: printenv and env dumps', () => {
   }
 });
 
+test('Bash: env piped to grep prints the value of whatever it matches', () => {
+  // HTTP_PROXY can hold a password and STRIPE_API_KEY matches STRIPE, so a harmless-looking name is no protection.
+  for (const c of ['env | grep STRIPE', 'env | grep -i proxy', 'env | grep -iE "a2p" | head']) {
+    assert.match(check(bash(c)), /names only/, c);
+  }
+  // The form the reason suggests has to pass.
+  assert.equal(check(bash('node -p "Object.keys(process.env)"')), null);
+});
+
 test('Bash: echo or printf of a secret variable', () => {
   for (const c of ['echo $GITHUB_TOKEN', 'echo "$API_KEY"', 'printf "%s" ${DB_PASSWORD}', 'echo token=$MY_SECRET']) {
     assert.notEqual(check(bash(c)), null, c);
@@ -90,8 +99,81 @@ test('the deny reason never repeats any characters of the token', () => {
 });
 
 test('other tools are ignored', () => {
-  assert.equal(check({ tool_name: 'Read', tool_input: { file_path: '.env' } }), null);
+  assert.equal(check({ tool_name: 'Glob', tool_input: { pattern: '.env' } }), null);
   assert.equal(check({ tool_name: 'Bash', tool_input: {} }), null);
+});
+
+test('documentation examples and placeholders with a prefix pass', () => {
+  const awsExample = 'AKIA' + 'IOSFODNN7' + 'EXAMPLE';
+  assert.equal(check(write(`aws_access_key_id = ${awsExample}`)), null);
+  assert.equal(check(write('key = sk-proj-' + 'x'.repeat(20))), null);
+  assert.equal(check(write('key = sk-svcacct-' + 'x'.repeat(20))), null);
+  assert.notEqual(check(write('key = sk-proj-' + body(40))), null);
+});
+
+test('Bash: variable names match at a word edge and quotes are honored', () => {
+  for (const c of ['echo $MONKEY', 'echo $KEYBOARD', "echo 'use $API_KEY here'", 'echo "$TOKENS"', 'printenv MONKEY']) {
+    assert.equal(check(bash(c)), null, c);
+  }
+  for (const c of ['echo $API_KEY', 'echo "$API_KEY"', 'printenv API_KEY', 'echo ${KEY}', 'echo "a $MY_TOKEN_2"']) {
+    assert.notEqual(check(bash(c)), null, c);
+  }
+});
+
+test('Read and Grep tools on env files', () => {
+  for (const file_path of ['.env', '.env.local', 'app\\.env', '/work/app/.env.production']) {
+    assert.match(check({ tool_name: 'Read', tool_input: { file_path } }), /\.env/, file_path);
+  }
+  assert.match(check({ tool_name: 'Grep', tool_input: { pattern: 'K', path: '.env' } }), /\.env/);
+  for (const file_path of ['.env.example', '.env.sample', '.env.template', 'src/env.js']) {
+    assert.equal(check({ tool_name: 'Read', tool_input: { file_path } }), null, file_path);
+  }
+  assert.equal(check({ tool_name: 'Grep', tool_input: { pattern: 'K', path: 'src' } }), null);
+});
+
+test('Bash: any reader of an env file or the process environment is denied', () => {
+  for (const c of [
+    'grep K .env', 'grep -n -e K .env.local', 'sed p .env', 'sed -n p app/.env', 'awk 1 .env', 'source .env', '. .env', 'sort .env',
+    'cat /proc/self/environ', 'cat /proc/1234/environ', 'Get-Content .env', 'gc ./.env', 'Select-String K .env',
+  ]) {
+    assert.notEqual(check(bash(c)), null, c);
+  }
+  for (const c of [
+    'cat .env.example', 'ls -a', 'git status', 'grep foo src/env.js', 'grep .env README.md', 'echo hello > .env', 'cat > .env.local', 'ls .env',
+  ]) {
+    assert.equal(check(bash(c)), null, c);
+  }
+});
+
+test('PowerShell is checked like Bash', () => {
+  const ps = (command) => ({ tool_name: 'PowerShell', tool_input: { command } });
+  assert.notEqual(check(ps('Get-Content .env')), null);
+  assert.notEqual(check(ps('gc .env')), null);
+  assert.equal(check(ps('Get-Content README.md')), null);
+});
+
+test('PowerShell: backslash paths to env files are denied', () => {
+  const ps = (command) => ({ tool_name: 'PowerShell', tool_input: { command } });
+  assert.notEqual(check(ps('gc .\\.env')), null);
+  assert.notEqual(check(ps('Get-Content .\\config\\.env.local')), null);
+  assert.equal(check(ps('Get-Content .\\.env.example')), null);
+});
+
+test('Bash: token and credential commands', () => {
+  for (const c of ['gh auth status --show-token', 'gh auth status -t', 'vercel env pull', 'vercel --token x env pull .env.local', 'npx vercel env pull']) {
+    assert.notEqual(check(bash(c)), null, c);
+  }
+  assert.equal(check(bash('gh auth status')), null);
+  assert.equal(check(bash('vercel --token x env ls')), null);
+});
+
+test('Bash: a command that writes a credential into a file is denied', () => {
+  const token = fixtures['a GitHub token'];
+  assert.match(check(bash(`echo "KEY=${token}" > .env`)), /GitHub token/);
+  assert.match(check(bash(`echo ${token} | tee creds.txt`)), /GitHub token/);
+  assert.match(check({ tool_name: 'PowerShell', tool_input: { command: `Set-Content a.txt "${token}"` } }), /GitHub token/);
+  assert.equal(check(bash('echo hello > .env')), null);
+  assert.equal(check(bash(`echo KEY=${'ghp_' + 'x'.repeat(36)} > .env`)), null);
 });
 
 test('script: malformed stdin allows with one stderr line', () => {

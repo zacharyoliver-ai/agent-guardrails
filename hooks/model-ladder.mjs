@@ -6,6 +6,7 @@ const DEFAULTS = {
   tiers: { cheap: ['haiku'], standard: ['sonnet'], expensive: ['opus'] },
   expensiveJobs: ['review', 'security', 'migration', 'legal', 'architecture', 'audit'],
   lookupWords: ['find', 'locate', 'list', 'count', 'look up', 'lookup', 'where is', 'search for'],
+  readOnlyAgents: ['scout', 'explore'],
   buildWords: ['build', 'implement', 'fix', 'write', 'refactor', 'add', 'create'],
 };
 
@@ -27,10 +28,11 @@ export function loadConfig(env = process.env) {
 }
 
 // Whole words only, so "listen" is not "list" and "account" is not "count".
-function hasWord(text, words) {
+// `atStart` matches only at the very start of the text, ignoring leading spaces.
+function hasWord(text, words, atStart = false) {
   return words.some((w) => {
     const body = String(w).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-    return new RegExp(`(?<![A-Za-z0-9])${body}(?![A-Za-z0-9])`, 'i').test(text);
+    return new RegExp(`${atStart ? '^\\s*' : '(?<![A-Za-z0-9])'}${body}(?![A-Za-z0-9])`, 'i').test(text);
   });
 }
 
@@ -59,12 +61,13 @@ export function checkLadder(input, env = process.env) {
   const text = String(ti.description || '');
   const review = hasWord(text, ['review', 'audit']);
   if (tier === 'cheap') {
-    return review ? `A review needs a stronger model than "${model}". Retry with "${expensive}".` : null;
+    const readOnly = cfg.readOnlyAgents.some((n) => String(n).toLowerCase() === String(ti.subagent_type || '').toLowerCase());
+    return review && !readOnly ? `A review needs a stronger model than "${model}". Retry with "${expensive}".` : null;
   }
   if (tier === 'expensive' && !hasWord(text, cfg.expensiveJobs)) {
     return `"${model}" is reserved for ${cfg.expensiveJobs.join(', ')}. Retry with "${standard}", or with "${cheap}" if this is only a lookup.`;
   }
-  if (!review && hasWord(text, cfg.lookupWords) && !hasWord(text, cfg.buildWords)) {
+  if (!review && hasWord(text, cfg.lookupWords, true) && !hasWord(text, cfg.buildWords)) {
     return `This reads like a lookup, and "${model}" costs more than it needs to. Retry with "${cheap}".`;
   }
   return null;

@@ -48,11 +48,20 @@ test('runs every fault, marks the caught ones and reports a weak test as MISSED'
 test('the working tree is never changed, and the temp copy is removed', () => {
   const dir = fixture();
   const before = fs.readFileSync(path.join(dir, 'lib/add.mjs'), 'utf8');
-  const copies = () => fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('ag-matrix-')).length;
-  const n = copies();
-  runMatrix({ root: dir });
+  // A private temp folder, so a matrix running in another process can't change the count.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pm-tmp-'));
+  const saved = { TMPDIR: process.env.TMPDIR, TEMP: process.env.TEMP, TMP: process.env.TMP };
+  Object.assign(process.env, { TMPDIR: tmp, TEMP: tmp, TMP: tmp });
+  try {
+    runMatrix({ root: dir });
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
   assert.equal(fs.readFileSync(path.join(dir, 'lib/add.mjs'), 'utf8'), before);
-  assert.equal(copies(), n);
+  assert.deepEqual(fs.readdirSync(tmp).filter((n) => n.startsWith('ag-matrix-')), []);
 });
 
 test('--only limits the run, and an unknown name is an error', () => {
@@ -106,4 +115,28 @@ test('cli: a fixture with one weak test exits 1 and prints a line per fault and 
   assert.equal(r.status, 1);
   assert.match(r.stdout, /MISSED add: The unused helper changes\./);
   assert.match(r.stdout, /2 of 3 faults caught/);
+});
+
+test('a fault that makes its test hang is TIMEOUT, which is not CAUGHT', () => {
+  const dir = fixture();
+  fs.writeFileSync(path.join(dir, 'lib/wait.mjs'), 'export const wait = () => new Promise((r) => setTimeout(r, 0));\n');
+  fs.writeFileSync(path.join(dir, 'test/wait.test.mjs'), "import test from 'node:test';\nimport { wait } from '../lib/wait.mjs';\ntest('waits', async () => { await wait(); });\n");
+  fs.writeFileSync(
+    path.join(dir, 'proof/faults/add.json'),
+    JSON.stringify({ name: 'add', kind: 'guard', what: 'Waits.', faults: [{ fault: 'The wait takes 6 seconds.', file: 'lib/wait.mjs', find: 'r, 0)', replace: 'r, 6000)', test: 'node --test test/wait.test.mjs' }] }),
+  );
+  const run = runMatrix({ root: dir, timeout: 3 });
+  assert.deepEqual(run.results.map((r) => r.status), ['TIMEOUT']);
+  assert.equal(run.caught, 0);
+});
+
+test('the counts in the README and PROOF.md match the fault files', () => {
+  const dir = path.join(repoRoot, 'proof/faults');
+  const tools = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+  const total = tools.reduce((sum, t) => sum + t.faults.length, 0);
+  const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
+  assert.ok(readme.includes(`carries ${total} planted faults across ${tools.length} tools`), `README paragraph should say ${total} and ${tools.length}`);
+  assert.ok(readme.includes(`planted%20faults-${total}-`), `README badge should say ${total}`);
+  const proof = fs.readFileSync(path.join(repoRoot, 'PROOF.md'), 'utf8');
+  assert.ok(proof.includes(`${total} of ${total} planted faults are caught, across ${tools.length} tools`), 'run node bin/proof-matrix.mjs --write');
 });

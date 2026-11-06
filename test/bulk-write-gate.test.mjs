@@ -10,7 +10,8 @@ import { check, checkSql } from '../hooks/bulk-write-gate.mjs';
 const script = fileURLToPath(new URL('../hooks/bulk-write-gate.mjs', import.meta.url));
 const bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });
 const sqlTool = (query, name = 'mcp__db__execute_sql') => ({ tool_name: name, tool_input: { query } });
-const PROTECTED = { GUARDRAILS_PROTECTED_TABLES: 'users, Orders' };
+const PROTECTED_T = { GUARDRAILS_PROTECTED_TABLES: 't' };
+const PROTECTED ={ GUARDRAILS_PROTECTED_TABLES: 'users, Orders' };
 
 test('writes with no WHERE are denied', () => {
   for (const s of [
@@ -98,6 +99,73 @@ test('Bash: other commands only count when they carry SQL', () => {
   for (const c of ['git commit -m "update docs"', 'git commit -m "DELETE FROM users"', 'echo "drop table x"', 'ls -la', 'npm test -- --update', 'grep -r "delete from" src', 'node script.js']) {
     assert.equal(check(bash(c), {}), null, c);
   }
+});
+
+test('TRUNCATE as a privilege or a plain word is not a truncate', () => {
+  for (const q of ['GRANT TRUNCATE ON t TO app', 'REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM app', 'select a as truncate from t']) {
+    assert.equal(check(sqlTool(q), {}), null, q);
+  }
+  assert.equal(check(bash(`node -e "log('truncate and retry')"`), {}), null);
+  for (const q of ['TRUNCATE t', 'TRUNCATE TABLE t', 'truncate only t', 'TRUNCATE public.t CASCADE']) {
+    assert.notEqual(check(sqlTool(q), {}), null, q);
+  }
+});
+
+test('Bash: xargs is judged by the command it runs', () => {
+  for (const c of ['ls | xargs grep "delete from users"', 'ls | xargs -n 1 grep -l "drop table users"', 'ls | xargs -I {} grep "truncate users" {}']) {
+    assert.equal(check(bash(c), {}), null, c);
+  }
+  for (const c of [
+    'ls | xargs psql -c "DELETE FROM users"',
+    'ls | xargs -n 1 psql -c "DROP TABLE users"',
+    'echo "DELETE FROM users" | xargs psql -c',
+    `ls | xargs -I {} node -e "db.query('DELETE FROM users')"`,
+  ]) assert.notEqual(check(bash(c), {}), null, c);
+});
+
+test('Bash: prose next to a SQL client is not read as SQL', () => {
+  for (const c of [
+    'psql -c "select 1" && git commit -m "delete from stale cache"',
+    'psql -c "select 1"; echo "update the set"',
+    `curl -d '{"q":"update the set"}' https://example.com`,
+  ]) assert.equal(check(bash(c), {}), null, c);
+  assert.equal(check(bash('psql -c "select 1" && git commit -m "$(cat <<\'EOF\'\ndelete from t\nEOF\n)"'), {}), null);
+  assert.notEqual(check(bash('psql -c "select 1" && psql -c "delete from t"'), {}), null);
+  assert.notEqual(check(bash('psql -c "select 1" && psql <<EOF\ndelete from t;\nEOF'), {}), null);
+  assert.notEqual(check(bash('echo "delete from t" | psql mydb'), {}), null);
+});
+
+test('Bash: a heredoc piped straight into a client is read, and any other heredoc is not', () => {
+  assert.notEqual(check(bash('cat <<EOF | psql\ndelete from users;\nEOF'), {}), null);
+  assert.equal(check(bash('cat <<EOF | psql\ndelete from users where id = 1;\nEOF'), {}), null);
+  assert.equal(check(bash('cat <<EOF | grep x\ndelete from users;\nEOF'), {}), null);
+  assert.equal(check(bash('cat <<EOF > notes.txt; psql -c "select 1"\ndelete from users;\nEOF'), {}), null);
+});
+
+test('PowerShell is read like Bash', () => {
+  const ps = (command) => ({ tool_name: 'PowerShell', tool_input: { command } });
+  assert.notEqual(check(ps('Invoke-Sqlcmd "delete from t"'), {}), null);
+  assert.equal(check(ps('Invoke-Sqlcmd "select 1"'), {}), null);
+});
+
+test('Bash: SQL files given to a client are read', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-bw-sql-'));
+  fs.writeFileSync(path.join(dir, 'migrate.sql'), 'delete from t;\n');
+  fs.writeFileSync(path.join(dir, 'safe.sql'), 'delete from t where id = 1;\n');
+  const at = (command) => ({ ...bash(command), cwd: dir });
+  for (const c of ['psql -f migrate.sql', 'psql --file=migrate.sql', 'psql mydb < migrate.sql', 'psql <migrate.sql']) {
+    assert.match(check(at(c), {}), /every row/, c);
+  }
+  assert.equal(check(at('psql -f safe.sql'), {}), null);
+  assert.equal(check(at('psql -f missing.sql'), {}), null);
+  assert.match(check(at('psql -f migrate.sql'), PROTECTED_T), /protected|every row/);
+});
+
+test('E-strings treat a backslash quote as an escape', () => {
+  assert.match(checkSql("select E'a\\'b'; delete from t", {}), /every row/);
+  assert.match(check(bash(`psql -c "select E'a\\\\'b'; delete from t"`), {}), /every row/);
+  assert.equal(checkSql("select E'a\\'; delete from t'", {}), null);
+  assert.match(checkSql("select 'a\\'; delete from t", {}), /every row/);
 });
 
 test('script: malformed stdin allows with one stderr line', () => {

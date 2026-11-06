@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { isMain, parseInput, readStdin } from '../lib/hook-io.mjs';
 import { addContext } from '../lib/stop-io.mjs';
+import { pruneState } from './decision-ledger.mjs';
 
 const MAX_LINES = 40;
 
@@ -51,6 +52,7 @@ export function decisionsChange(input, env = process.env) {
     // first prompt of this session
   }
   fs.mkdirSync(path.dirname(snap), { recursive: true });
+  pruneState(path.dirname(snap), 'decisions-');
   if (before === current) return null;
   fs.writeFileSync(snap, current);
   if (before === null) return null;

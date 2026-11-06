@@ -14,8 +14,26 @@ const ledgerPath = (input, env) =>
 const stateDir = (env) => env.GUARDRAILS_STATE_DIR || path.join(os.tmpdir(), 'agent-guardrails');
 const normalize = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
+/** Deletes this tool's own state files (names starting with prefix) not touched for 30 days. */
+export function pruneState(dir, prefix, now = Date.now()) {
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.startsWith(prefix)) continue;
+      const file = path.join(dir, name);
+      if (now - fs.statSync(file).mtimeMs > 30 * DAY) fs.rmSync(file, { force: true });
+    }
+  } catch {
+    // no folder yet, or a file went away first
+  }
+}
+
 function append(file, event) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    // The ledger holds question text; keep a later `git add .` from committing it.
+    if (path.basename(dir) === '.agent-guardrails') fs.writeFileSync(path.join(dir, '.gitignore'), '*\n');
+  }
   fs.appendFileSync(file, JSON.stringify(event) + '\n');
 }
 
@@ -54,14 +72,18 @@ export function markerLines(message, marker) {
   return out;
 }
 
-/** Records new marker lines; returns the lines that carry no recommendation. */
+/**
+ * Records new marker lines and returns the ones that carry no recommendation. A line without one
+ * is held back from the ledger on the first pass, so the retry that adds it leaves one decision.
+ */
 export function recordAsks(input, env = process.env, now = Date.now()) {
   const marker = env.GUARDRAILS_DECISION_MARKER || 'Your call:';
   const lines = markerLines(finalText(input), marker);
   if (!lines.length) return [];
   const file = ledgerPath(input, env);
   const known = new Set(openDecisions(file).map((d) => normalize(d.text)));
-  for (const { text } of lines) {
+  for (const { text, hasRecommendation } of lines) {
+    if (!hasRecommendation && input.stop_hook_active !== true) continue;
     const key = normalize(text);
     if (known.has(key)) continue;
     known.add(key);
@@ -74,7 +96,7 @@ export function recordAsks(input, env = process.env, now = Date.now()) {
 export function checkStop(input, env = process.env, now = Date.now()) {
   const missing = recordAsks(input, env, now);
   if (!missing.length || input.stop_hook_active === true) return null;
-  return `Each question to the person needs your recommendation. Add it to: "${missing[0].text}". The question is already recorded; state your recommendation and the one-line reason, then finish.`;
+  return `Each question to the person needs your recommendation. Add it to: "${missing[0].text}". It is recorded once you do. State your recommendation and the one-line reason, then finish.`;
 }
 
 /** Context for a prompt, or null when nothing changed since this session last saw it. */
@@ -92,6 +114,7 @@ export function promptContext(input, env = process.env, now = Date.now()) {
   }
   if (seen.sig === sig && now - seen.shown_at < DAY) return null;
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  pruneState(path.dirname(file), 'ledger-', now);
   fs.writeFileSync(file, JSON.stringify({ sig, shown_at: now }));
 
   const rows = open.slice(0, SHOWN_MAX).map((d) => `- ${d.id}: ${d.text}`);

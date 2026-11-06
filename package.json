@@ -5,17 +5,19 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=18.11"
   },
   "bin": {
     "ci-minutes": "bin/ci-minutes.mjs",
     "contract-check": "bin/contract-check.mjs",
     "find-vacuous-tests": "bin/find-vacuous-tests.mjs",
+    "gen-plugin-hooks": "bin/gen-plugin-hooks.mjs",
     "lane-board": "bin/lane-board.mjs",
     "pin-check": "bin/pin-check.mjs",
     "plain-copy": "bin/plain-copy.mjs",
     "planted-fault": "bin/planted-fault.mjs",
     "proof-matrix": "bin/proof-matrix.mjs",
+    "replay": "bin/replay.mjs",
     "setup": "bin/setup.mjs",
     "usage-report": "bin/usage-report.mjs"
   },

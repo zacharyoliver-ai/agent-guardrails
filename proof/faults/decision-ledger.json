@@ -23,6 +23,34 @@
       "find": "if (!words) {",
       "replace": "if (false) {",
       "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "A question with no recommendation is recorded before it is sent back, so the retry leaves two decisions.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (!hasRecommendation && input.stop_hook_active !== true) continue;",
+      "replace": "",
+      "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "The folder is created without a .gitignore, so git add . can commit the ledger.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (path.basename(dir) === '.agent-guardrails')",
+      "replace": "if (false)",
+      "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "Old state files are never deleted.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (now - fs.statSync(file).mtimeMs > 30 * DAY)",
+      "replace": "if (false)",
+      "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "State files younger than 30 days are deleted too.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (now - fs.statSync(file).mtimeMs > 30 * DAY)",
+      "replace": "if (true)",
+      "test": "node --test test/decision-ledger.test.mjs"
     }
   ]
 }

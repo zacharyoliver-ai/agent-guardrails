@@ -30,6 +30,13 @@
       "find": "if (touched && !lines.some(",
       "replace": "if (false && !lines.some(",
       "test": "node --test test/contract-check.test.mjs"
+    },
+    {
+      "fault": "The timeout option is not passed on, so a hanging fault waits for the default limit.",
+      "file": "bin/contract-check.mjs",
+      "find": "test, cwd: root, timeout }",
+      "replace": "test, cwd: root }",
+      "test": "node --test test/contract-check.test.mjs"
     }
   ]
 }

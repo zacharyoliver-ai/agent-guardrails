@@ -20,7 +20,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit|Write|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -29,7 +29,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -38,7 +38,7 @@
         ]
       },
       {
-        "matcher": "Bash|Edit|Write|NotebookEdit",
+        "matcher": "Bash|PowerShell|Edit|Write|NotebookEdit|Read|Grep",
         "hooks": [
           {
             "type": "command",
@@ -47,7 +47,7 @@
         ]
       },
       {
-        "matcher": "Bash|mcp__.*",
+        "matcher": "Bash|PowerShell|mcp__.*",
         "hooks": [
           {
             "type": "command",
@@ -56,7 +56,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -75,6 +75,16 @@
       },
       {
         "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/fleet-cap.mjs\""
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
         "hooks": [
           {
             "type": "command",

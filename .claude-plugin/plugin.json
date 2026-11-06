@@ -1,0 +1,9 @@
+{
+  "name": "agent-guardrails",
+  "version": "0.2.0",
+  "description": "Hooks and tools for running many AI coding agents at once, with a planted bug behind every guard to show it works.",
+  "author": { "name": "Oliver Labs LLC" },
+  "homepage": "https://github.com/zacharyoliver-ai/agent-guardrails",
+  "repository": "https://github.com/zacharyoliver-ai/agent-guardrails",
+  "license": "MIT"
+}

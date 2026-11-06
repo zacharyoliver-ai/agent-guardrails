@@ -6,11 +6,11 @@ Counted from its main branch on November 5, 2026:
 
 | What | Count |
 |---|--:|
-| Commits on main | 19,350 |
-| Merged pull requests | 4,409 |
-| Test files | 9,770 |
-| Feature contracts | 93 |
-| Commits marked for a production release | 480 |
+| Commits on main | 19,360 |
+| Merged pull requests | 4,412 |
+| Test files | 9,935 |
+| Feature contracts | 95 |
+| Commits marked for a production release | 481 |
 | Checks required before any merge | 4 |
 
 ## What has to pass before a merge
@@ -21,6 +21,10 @@ Counted from its main branch on November 5, 2026:
 4. **Contract proof** for any feature the change touches. A contract lists what the feature must always and never do, and each line names a test that fails on a broken copy.
 
 Merges go through a queue that runs the product and contract checks again on top of the latest main. A change that only breaks alongside another one gets dropped and never lands.
+
+## Replay over real sessions
+
+[replay](../bin/replay.mjs) runs recorded tool calls back through the guards that judge a call on its own: git-guard, secret-guard, bulk-write-gate, foreground-wait and model-ladder. We ran them over more than 1.2 million tool calls from more than 13,000 of our own session transcripts and read a sample of every kind of refusal. Where a kind of refusal hit ordinary work, we changed the guard and added a test and a planted fault for that case. The same command runs on your sessions.
 
 ## Where each tool here came from
 

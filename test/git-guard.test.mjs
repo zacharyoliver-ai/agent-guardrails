@@ -23,6 +23,24 @@ test('named adds and commits pass', () => {
   }
 });
 
+test('git add with named paths is not a sweep', () => {
+  for (const c of ['git add -A src/a.js', 'git add --all src tests', 'git add -A -- src/a.js', 'git add src/a.js', 'git add -u src/a.js']) {
+    assert.equal(verdict(c), null, c);
+  }
+  for (const c of ['git add -A', 'git add --all', 'git add .', 'git add ./', 'git add -A .', 'git add -- .', 'git add :/', 'git add -A :/', "git add '*'", 'git add *', 'git add -u', 'git add --update', 'git add -uv']) {
+    assert.match(verdict(c), /Name the paths/, c);
+  }
+});
+
+test('git stash with named paths is not a sweep', () => {
+  for (const c of ['git stash push src/a.js', 'git stash push -q -m note -- src/a.js tests/b.js', 'git stash -- src/a.js', 'git stash list', 'git stash show', 'git stash pop', 'git stash apply']) {
+    assert.equal(verdict(c), null, c);
+  }
+  for (const c of ['git stash', 'git stash -q', 'git stash -u', 'git stash -m note', 'git stash push', 'git stash push -m note', 'git stash push -u -m note', 'git stash save note', 'git stash push -- .', 'git stash push .']) {
+    assert.match(verdict(c), /git stash push -- path\/one/, c);
+  }
+});
+
 test('quoted text never triggers', () => {
   for (const c of ['git commit -m "never use git add -A" -- f', 'echo "git push --force origin main"', "echo 'git reset --hard'", 'git commit -m "rm -rf / is bad" -- f', 'cat <<EOF\ngit add -A\nEOF']) {
     assert.equal(verdict(c), null, c);
@@ -41,7 +59,98 @@ test('force pushes are denied, lease is allowed', () => {
   }
   assert.equal(verdict('git push --force-with-lease origin feature'), null);
   assert.equal(verdict('git push -u origin feature'), null);
-  assert.equal(verdict('git push'), null);
+  assert.equal(verdict('git push', {}, repoOn('feature')), null);
+});
+
+// A temp repository whose checked-out branch is `branch` (no commit needed to read it).
+function repoOn(branch) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-gg-'));
+  const run = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  run('init', '-q');
+  run('symbolic-ref', 'HEAD', `refs/heads/${branch}`);
+  return dir;
+}
+
+test('a bare push or a push of HEAD is denied while main or master is checked out', () => {
+  for (const branch of ['main', 'master']) {
+    const cwd = repoOn(branch);
+    for (const c of ['git push', 'git push origin', 'git push origin HEAD', 'git push -u origin HEAD', 'git -C . push', 'git push origin 2>&1 | tail -n 3', 'git push > out.txt']) {
+      assert.match(verdict(c, {}, cwd), /main or master/, `${branch}: ${c}`);
+    }
+    assert.equal(verdict('git push origin feature', {}, cwd), null);
+    assert.equal(verdict('git push --tags', {}, cwd), null);
+    assert.equal(verdict('git push', { GUARDRAILS_GIT_ALLOW_MAIN: '1' }, cwd), null);
+  }
+  const feature = repoOn('feature');
+  for (const c of ['git push', 'git push origin HEAD']) assert.equal(verdict(c, {}, feature), null, c);
+});
+
+test('an input redirection is not an argument, so it never hides a sweep or a bare push', () => {
+  for (const c of ['git add -A </dev/null', 'git add -A < /dev/null', 'git add --all </dev/null', 'git stash </dev/null']) {
+    assert.notEqual(verdict(c), null, c);
+  }
+  assert.match(verdict('git push origin </dev/null', {}, repoOn('main')), /main or master/);
+  assert.equal(verdict('git add src/a.js </dev/null'), null);
+});
+
+test('a cd earlier in the command decides which branch a bare push reads', () => {
+  const main = repoOn('main');
+  const feature = repoOn('feature');
+  assert.equal(verdict(`cd "${feature}" && git push -u origin HEAD`, {}, main), null);
+  assert.match(verdict(`cd "${main}" && git push`, {}, feature), /main or master/);
+  assert.equal(verdict('cd "$LANE" && git push', {}, main), null);
+  assert.match(verdict('git push', {}, main), /main or master/);
+});
+
+test('a push where the branch cannot be read is allowed', () => {
+  assert.equal(verdict('git push', {}, path.join(os.tmpdir(), 'ag-gg-no-such-folder')), null);
+});
+
+test('launchers, shells, keywords and program paths do not hide a denied command', () => {
+  for (const c of [
+    'env X=1 git add -A', 'env -i git add -A', 'sudo -u bob git add -A', 'sudo FOO=1 git add -A',
+    'time -p git add -A', 'nice -n 5 git add -A', 'bash -lc "git add -A"', 'sh -xc "git add -A"',
+    'eval "git add -A"', 'echo "$(git add -A)"', '/usr/bin/git add -A', 'git.exe add -A',
+    'if true; then git add -A; fi', 'for f in a; do git reset --hard; done', '{ git add -A; }',
+    '! git add -A', 'while true; do git add .; done', 'git --config-env x=Y add -A',
+    'xargs -n1 git reset --hard', 'timeout 60 git add -A',
+  ]) {
+    assert.notEqual(verdict(c), null, c);
+  }
+  assert.match(verdict('/bin/rm -rf /'), /rm -r/);
+  assert.match(verdict('sudo /usr/bin/rm -rf ~'), /rm -r/);
+});
+
+test('mentions inside strings and harmless launched commands stay allowed', () => {
+  for (const c of [
+    'git commit -m "git add -A is denied now" -- f', 'echo "git reset --hard"', 'env X=1 git status',
+    'sudo -u bob git add src/a.js', 'bash -lc "git status"', 'xargs git add', 'echo "$(git status)"',
+    'if true; then git status; fi', 'echo eval git add -A',
+  ]) {
+    assert.equal(verdict(c), null, c);
+  }
+});
+
+test('git clean: dry runs pass, forced cleans are denied', () => {
+  for (const c of ['git clean -nfd', 'git clean --dry-run -fd', 'git clean -fdn', 'git clean -n -f']) {
+    assert.equal(verdict(c), null, c);
+  }
+  for (const c of ['git clean -fd', 'git clean -f', 'git clean --force -d']) assert.match(verdict(c), /clean -f/, c);
+});
+
+test('the PowerShell tool is checked like Bash', () => {
+  const ps = (command) => check({ tool_name: 'PowerShell', tool_input: { command } }, {});
+  assert.match(ps('git add -A'), /Name the paths/);
+  assert.match(ps('git reset --hard'), /reset --hard/);
+  assert.equal(ps('git add src/a.js'), null);
+});
+
+test('a commit message in a command substitution never turns a body line into a command', () => {
+  const body = 'fix the "x problem';
+  const msg = (line) => `git commit -m "$(cat <<'EOF'\nsubject\n\n${body}\n${line}\nEOF\n)" -- f`;
+  assert.equal(verdict(msg('git reset --hard is now blocked')), null);
+  assert.equal(verdict(msg('git add -A is mentioned here')), null);
+  assert.equal(verdict(msg('plain text')), null);
 });
 
 test('pushes that target main or master are denied unless allowed', () => {

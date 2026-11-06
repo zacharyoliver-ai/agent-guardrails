@@ -6,8 +6,8 @@
     {
       "fault": "A fault whose test still passes is reported as CAUGHT.",
       "file": "bin/proof-matrix.mjs",
-      "find": "(code === 0 ? 'CAUGHT' : code === 1 ? 'MISSED' : 'ERROR')",
-      "replace": "(code === 0 || code === 1 ? 'CAUGHT' : 'ERROR')",
+      "find": "(code === 0 ? 'CAUGHT' : code === 1 ? 'MISSED' : code === 3",
+      "replace": "(code === 0 || code === 1 ? 'CAUGHT' : code === 3",
       "test": "node --test test/proof-matrix.test.mjs"
     },
     {
@@ -29,6 +29,20 @@
       "file": "bin/proof-matrix.mjs",
       "find": "fs.rmSync(copy, { recursive: true, force: true });",
       "replace": "",
+      "test": "node --test test/proof-matrix.test.mjs"
+    },
+    {
+      "fault": "A timed out fault is reported as CAUGHT.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "code === 3 ? 'TIMEOUT' : 'ERROR'",
+      "replace": "code === 3 ? 'CAUGHT' : 'ERROR'",
+      "test": "node --test test/proof-matrix.test.mjs"
+    },
+    {
+      "fault": "The timeout option is not passed on to the fault runs.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "test: f.test, cwd: copy, timeout }",
+      "replace": "test: f.test, cwd: copy }",
       "test": "node --test test/proof-matrix.test.mjs"
     }
   ]

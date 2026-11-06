@@ -74,6 +74,24 @@ test('edge: whole words only, so "listen" and "account" are not lookups', () => 
   assert.match(checkLadder(call('List the exports', 'sonnet'), {}), /haiku/);
 });
 
+test('a lookup word counts only at the start of the description', () => {
+  for (const d of ['Group sends tests and count bug', 'Critique round 12 folder list', 'Finish blast, red, one-spec list', 'Folder list at full depth', 'Opt-outs: 30004 into the permanent list']) {
+    assert.equal(checkLadder(call(d, 'sonnet'), {}), null, d);
+  }
+  for (const d of ['Find and read his profile', 'List direct Postgres clients', 'Find commits that turned three specs red', 'Search for past decisions', 'Where is the retry loop', '  Count the callers']) {
+    assert.match(checkLadder(call(d, 'sonnet'), {}), /haiku/, d);
+  }
+});
+
+test('a read-only agent type may name a review in passing on a cheap model', () => {
+  const agent = (description, subagent_type, model) => ({ tool_name: 'Agent', tool_input: { description, prompt: 'x', ...(subagent_type ? { subagent_type } : {}), model } });
+  for (const [d, type] of [['Scout: re-derive A2P profile-review limit facts', 'scout'], ["Re-derive the audit's code facts", 'Explore']]) {
+    assert.equal(checkLadder(agent(d, type, 'haiku'), {}), null, d);
+  }
+  assert.match(checkLadder(agent('Review the auth diff', 'general-purpose', 'haiku'), {}), /Retry with "opus"/);
+  assert.match(checkLadder(agent('Review the auth diff', undefined, 'haiku'), {}), /Retry with "opus"/);
+});
+
 test('GUARDRAILS_LADDER overrides listed keys and keeps the rest', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-ladder-'));
   const file = path.join(dir, 'ladder.json');

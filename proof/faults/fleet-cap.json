@@ -13,7 +13,7 @@
     {
       "fault": "Entries never expire, so a crashed agent locks the session out for good.",
       "file": "hooks/fleet-cap.mjs",
-      "find": "now - e.startedAt < ttl",
+      "find": "now - e.startedAt < (e.state === 'pending' ? PENDING_MS : ttl)",
       "replace": "true",
       "test": "node --test test/fleet-cap.test.mjs"
     },
@@ -29,6 +29,27 @@
       "file": "hooks/fleet-cap.mjs",
       "find": "`fleet-${key}.json`",
       "replace": "'fleet-shared.json'",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "A call another hook denied never frees its slot, because it is recorded as running.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "startedAt: now, state: 'pending' });",
+      "replace": "startedAt: now, state: 'running' });",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "A started agent loses its slot after 60 seconds like a pending call.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "(e.state === 'pending' ? PENDING_MS : ttl)",
+      "replace": "PENDING_MS",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "SubagentStop ignores the agent id and frees the wrong entry of the same type.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "live.findIndex((e) => e.agent_id === input.agent_id)",
+      "replace": "-1",
       "test": "node --test test/fleet-cap.test.mjs"
     }
   ]

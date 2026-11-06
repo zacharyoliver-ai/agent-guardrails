@@ -16,6 +16,20 @@
       "find": "if (before === null) return null;",
       "replace": "if (before === null) before = '';",
       "test": "node --test test/decisions-file.test.mjs"
+    },
+    {
+      "fault": "Old snapshots are never deleted.",
+      "file": "hooks/decisions-file.mjs",
+      "find": "pruneState(path.dirname(snap), 'decisions-');",
+      "replace": "",
+      "test": "node --test test/decisions-file.test.mjs"
+    },
+    {
+      "fault": "The cleanup matches every file in the shared state folder, not only its own snapshots.",
+      "file": "hooks/decisions-file.mjs",
+      "find": "pruneState(path.dirname(snap), 'decisions-')",
+      "replace": "pruneState(path.dirname(snap), '')",
+      "test": "node --test test/decisions-file.test.mjs"
     }
   ]
 }

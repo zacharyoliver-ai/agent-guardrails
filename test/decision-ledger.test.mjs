@@ -25,13 +25,49 @@ test('a marker line with a recommendation is recorded and allowed', () => {
   assert.equal(open[0].asked_at, '2030-01-01T00:00:00.000Z');
 });
 
-test('a marker line without a recommendation goes back once and is still recorded', () => {
+test('a marker line without a recommendation goes back once and is recorded only on the retry', () => {
   const { env } = setup();
   const r = checkStop(stop('Your call: ship now or wait?'), env, NOW);
   assert.match(r, /recommendation/);
-  assert.equal(openDecisions(env.GUARDRAILS_LEDGER).length, 1);
+  assert.equal(openDecisions(env.GUARDRAILS_LEDGER).length, 0);
   assert.equal(checkStop(stop('Your call: ship now or wait?', { stop_hook_active: true }), env, NOW), null);
   assert.equal(openDecisions(env.GUARDRAILS_LEDGER).length, 1);
+});
+
+test('the retry that adds a recommendation leaves exactly one open decision', () => {
+  const { env } = setup();
+  assert.match(checkStop(stop('Your call: ship it now?'), env, NOW), /recommendation/);
+  assert.equal(checkStop(stop('Your call: ship it now? I recommend yes, tests pass.', { stop_hook_active: true }), env, NOW + 1), null);
+  assert.deepEqual(openDecisions(env.GUARDRAILS_LEDGER).map((d) => d.text), ['ship it now? I recommend yes, tests pass.']);
+});
+
+test('the first ledger write adds a .gitignore holding * beside a default ledger', () => {
+  const cwd = tmp();
+  const env = { GUARDRAILS_STATE_DIR: path.join(cwd, 'state') };
+  checkStop({ session_id: 's1', cwd, last_assistant_message: 'Your call: A? I recommend yes.' }, env, NOW);
+  const dir = path.join(cwd, '.agent-guardrails');
+  assert.equal(fs.readFileSync(path.join(dir, '.gitignore'), 'utf8'), '*\n');
+  checkStop({ session_id: 's1', cwd, last_assistant_message: 'Your call: B? I recommend no.' }, env, NOW + 1);
+  assert.equal(fs.readFileSync(path.join(dir, '.gitignore'), 'utf8'), '*\n');
+  assert.ok(fs.existsSync(path.join(dir, 'decisions.jsonl')));
+});
+
+test('writing prompt context deletes ledger state files older than 30 days and keeps the rest', () => {
+  const { env } = setup();
+  checkStop(stop('Your call: A? I recommend yes.'), env, NOW);
+  fs.mkdirSync(env.GUARDRAILS_STATE_DIR, { recursive: true });
+  const old = path.join(env.GUARDRAILS_STATE_DIR, 'ledger-old.json');
+  const fresh = path.join(env.GUARDRAILS_STATE_DIR, 'ledger-fresh.json');
+  const other = path.join(env.GUARDRAILS_STATE_DIR, 'fleet-old.json');
+  for (const f of [old, fresh, other]) fs.writeFileSync(f, '{}');
+  const when = (days) => new Date(NOW - days * 86400000);
+  fs.utimesSync(old, when(31), when(31));
+  fs.utimesSync(other, when(31), when(31));
+  fs.utimesSync(fresh, when(29), when(29));
+  promptContext({ session_id: 's1' }, env, NOW);
+  assert.equal(fs.existsSync(old), false);
+  assert.equal(fs.existsSync(fresh), true);
+  assert.equal(fs.existsSync(other), true);
 });
 
 test('the same question is recorded once, ignoring case and punctuation', () => {
@@ -119,6 +155,7 @@ test('script: Stop and UserPromptSubmit through stdin', () => {
   const run = (input) => spawnSync(process.execPath, [script], { input: JSON.stringify(input), encoding: 'utf8', env: full });
   const s = run({ hook_event_name: 'Stop', session_id: 'x', last_assistant_message: 'Your call: go?' });
   assert.equal(JSON.parse(s.stdout).decision, 'block');
+  assert.equal(run({ hook_event_name: 'Stop', session_id: 'x', stop_hook_active: true, last_assistant_message: 'Your call: go?' }).stdout, '');
   const p = run({ hook_event_name: 'UserPromptSubmit', session_id: 'x', prompt: 'hi' });
   const out = JSON.parse(p.stdout);
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');

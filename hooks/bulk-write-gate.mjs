@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import path from 'node:path';
 import { isMain, run } from '../lib/hook-io.mjs';
 import { simpleCommands } from '../lib/shell.mjs';
 
 const CLIENTS = new Set(['psql', 'mysql', 'mariadb', 'sqlite3', 'supabase', 'sqlcmd']);
 const LAUNCHERS = new Set(['sudo', 'command', 'time', 'nohup', 'exec', 'npx', 'env']);
 // Commands that talk about SQL without running it.
-const PROSE = new Set(['git', 'gh', 'echo', 'printf', 'grep', 'rg', 'sed', 'awk', 'cat', 'ls', 'head', 'tail', 'find']);
+const PROSE = new Set(['git', 'gh', 'echo', 'printf', 'grep', 'rg', 'sed', 'awk', 'cat', 'ls', 'head', 'tail', 'find', 'curl', 'wget']);
 const OK = '\u0001';
 const NAME = '([\\w$]+(?:\\.[\\w$]+)*)';
 const DML = new RegExp(
   [
     `\\bdelete\\s+from\\s+(?:only\\s+)?${NAME}`,
     `\\bupdate\\s+(?:only\\s+)?${NAME}\\s+(?:as\\s+\\w+\\s+)?set\\b`,
-    `\\btruncate\\s+(?:table\\s+)?(?:only\\s+)?${NAME}`,
+    // The lookahead skips GRANT TRUNCATE ON and "truncate the name" in prose.
+    `\\btruncate\\s+(?!(?:on|and|or|from|to|the|in|of|is|for|with)\\b)(?:table\\s+)?(?:only\\s+)?${NAME}`,
     `\\bdrop\\s+table\\s+(?:if\\s+exists\\s+)?${NAME}`,
     `\\balter\\s+table\\s+(?:if\\s+exists\\s+)?(?:only\\s+)?${NAME}`,
   ].join('|'),
@@ -39,8 +41,12 @@ export function cleanSql(sql, keepStrings = false) {
       i = end === -1 ? sql.length : end + 1;
       out += ' ';
     } else if (c === "'" && !keepStrings) {
+      // E'...' strings also treat backslash as an escape.
+      const escapes = /[eE]/.test(sql[i - 1] ?? '') && !/\w/.test(sql[i - 2] ?? '');
       i++;
-      while (i < sql.length && !(sql[i] === "'" && sql[i + 1] !== "'")) i += sql[i] === "'" ? 2 : 1;
+      while (i < sql.length && !(sql[i] === "'" && sql[i + 1] !== "'")) {
+        i += sql[i] === "'" || (escapes && sql[i] === '\\') ? 2 : 1;
+      }
       out += "''";
     } else if (c === '$') {
       const tag = /^\$([A-Za-z_]\w*)?\$/.exec(sql.slice(i));
@@ -125,18 +131,85 @@ export function checkSql(sql, env = process.env, keepStrings = false) {
   return null;
 }
 
-function bashTexts(command) {
+const isClient = (w) => CLIENTS.has(String(w[0]).toLowerCase());
+const CLIENT_WORD = /(?:^|[\s;&|(])(?:psql|mysql|mariadb|sqlite3|supabase|sqlcmd|invoke-sqlcmd)\b/i;
+// "echo 'delete from t' | psql": the producer on the left of a pipe feeds the client.
+const PIPED_INTO_CLIENT = /\|\s*(?:(?:sudo|command|time|nohup|exec|npx|xargs)\s+)*(?:psql|mysql|mariadb|sqlite3|supabase|sqlcmd|invoke-sqlcmd)\b/i;
+const MAX_FILE = 1024 * 1024;
+
+/** Bodies of heredocs that are fed to a SQL client. */
+function heredocBodies(command) {
+  const lines = command.split(/\r?\n/);
+  const bodies = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = /(?<!<)<<(?!<)-?\s*(?:'([^']*)'|"([^"]*)"|\\?([^\s;&|<>()]+))/.exec(lines[i]);
+    if (!m) continue;
+    // Only the command the heredoc belongs to counts, not an earlier one on the same line,
+    // or a client it is piped straight into, as in cat <<EOF | psql.
+    const owner = lines[i].slice(0, m.index).split(/&&|\|\||[;|&(`]/).pop();
+    const pipedOn = /^[^;&]*/.exec(lines[i].slice(m.index))[0];
+    if (!CLIENT_WORD.test(owner) && !PIPED_INTO_CLIENT.test(pipedOn)) continue;
+    const delim = m[1] ?? m[2] ?? m[3];
+    const body = [];
+    for (i++; i < lines.length && lines[i].trim() !== delim; i++) body.push(lines[i]);
+    bodies.push(body.join('\n'));
+  }
+  return bodies;
+}
+
+/** Files a client reads its SQL from: -f file, --file file, --file=file, < file. */
+function inputFiles(words) {
+  const files = [];
+  words.forEach((x, i) => {
+    const next = words[i + 1];
+    if (/^(?:-f|-i|--file|<)$/.test(x) && next) files.push(next);
+    else if (x.startsWith('--file=')) files.push(x.slice(7));
+    else if (/^<[^<]/.test(x)) files.push(x.slice(1));
+  });
+  return files;
+}
+
+function readSmall(file, cwd) {
+  try {
+    const full = path.resolve(cwd || process.cwd(), file);
+    return fs.statSync(full).size < MAX_FILE ? fs.readFileSync(full, 'utf8') : null;
+  } catch {
+    return null; // hooks fail open
+  }
+}
+
+/** The command xargs runs, after its own flags, so "xargs grep 'delete from t'" counts as a search. */
+function afterXargs(words) {
+  let i = 1;
+  while (i < words.length && words[i].startsWith('-')) i += /^-[nIPLsdEa]$/.test(words[i]) ? 2 : 1;
+  return words.slice(i);
+}
+
+function bashTexts(command, cwd) {
   const cmds = simpleCommands(command).map((w) => {
     let x = w;
-    while (LAUNCHERS.has(x[0])) x = x.slice(1);
+    while (LAUNCHERS.has(x[0]) || x[0] === 'xargs') x = x[0] === 'xargs' ? afterXargs(x) : x.slice(1);
     return x;
   });
-  if (cmds.some((w) => CLIENTS.has(w[0]))) {
-    // Two views: the arguments with shell quotes removed, and the raw text for heredocs and pipes.
-    return [[cmds.map((w) => w.join(' ')).join('\n;\n'), false], [command, false]];
+  const clients = cmds.filter(isClient);
+  if (clients.length) {
+    // Only the client's own words, its heredocs and what is piped into it.
+    const words = clients.map((w) => w.join(' '));
+    if (PIPED_INTO_CLIENT.test(command)) {
+      words.push(...cmds.filter((w) => w[0] === 'echo' || w[0] === 'printf').map((w) => w.slice(1).join(' ')));
+    }
+    const texts = [[words.join('\n;\n'), false], ...heredocBodies(command).map((b) => [b, false])];
+    for (const w of clients) {
+      for (const f of inputFiles(w)) {
+        const text = readSmall(f, cwd);
+        if (text !== null) texts.push([text, false]);
+      }
+    }
+    return texts;
   }
   const text = cmds.filter((w) => w[0] && !PROSE.has(w[0])).map((w) => w.join(' ')).join('\n;\n');
   // Here SQL sits inside a string of another language, so strings are kept.
+  // Known limit: a script that only mentions SQL, such as one patching a file with node -e, reads as SQL.
   return [[text, true]];
 }
 
@@ -144,9 +217,9 @@ function bashTexts(command) {
 export function check(input, env = process.env) {
   const ti = input.tool_input || {};
   let texts;
-  if (input.tool_name === 'Bash') {
+  if (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') {
     if (typeof ti.command !== 'string') return null;
-    texts = bashTexts(ti.command);
+    texts = bashTexts(ti.command, input.cwd);
   } else if (/sql|query|postgres|supabase/i.test(String(input.tool_name))) {
     texts = [ti.query, ti.sql, ti.command].filter((t) => typeof t === 'string').map((t) => [t, false]);
   } else return null;

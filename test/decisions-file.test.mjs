@@ -82,3 +82,20 @@ test('script: prints additionalContext on change, fails open on bad input', () =
   assert.equal(bad.stdout, '');
   assert.equal(bad.stderr.trim().split('\n').length, 1);
 });
+
+test('a snapshot write deletes decisions snapshots older than 30 days and keeps the rest', () => {
+  const { env } = setup('a\n');
+  fs.mkdirSync(env.GUARDRAILS_STATE_DIR, { recursive: true });
+  const old = path.join(env.GUARDRAILS_STATE_DIR, 'decisions-old.txt');
+  const fresh = path.join(env.GUARDRAILS_STATE_DIR, 'decisions-fresh.txt');
+  const other = path.join(env.GUARDRAILS_STATE_DIR, 'fleet-old.json');
+  for (const f of [old, fresh, other]) fs.writeFileSync(f, 'x');
+  const ago = (days) => new Date(Date.now() - days * 86400000);
+  fs.utimesSync(old, ago(31), ago(31));
+  fs.utimesSync(other, ago(31), ago(31));
+  fs.utimesSync(fresh, ago(29), ago(29));
+  decisionsChange(prompt(), env);
+  assert.equal(fs.existsSync(old), false);
+  assert.equal(fs.existsSync(fresh), true);
+  assert.equal(fs.existsSync(other), true);
+});

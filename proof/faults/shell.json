@@ -1,0 +1,70 @@
+{
+  "name": "shell",
+  "kind": "guard",
+  "what": "The shell tokenizer keeps quoted text from looking like a command, reads the commands inside a double-quoted command substitution as commands of their own, and never mistakes an output redirection for an argument.",
+  "faults": [
+    {
+      "fault": "The target of an output redirection stays as a word, so > out.txt reads as an argument.",
+      "file": "lib/shell.mjs",
+      "find": "dropNext = true;",
+      "replace": "dropNext = false;",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "The file descriptor stays as a word, so 2>&1 leaves a stray 2 among the arguments.",
+      "file": "lib/shell.mjs",
+      "find": "if (/^(?:\\d+|\\*)$/.test(word)) {",
+      "replace": "if (false) {",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "The ampersand in 2>&1 ends the command, so a stray 1 reads as a command of its own.",
+      "file": "lib/shell.mjs",
+      "find": "/^&?>{1,2}[&|]?/",
+      "replace": "/^&?>{1,2}/",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "The ampersand in &> ends the command, so the words after the redirection become a new command.",
+      "file": "lib/shell.mjs",
+      "find": "(c === '&' && src[i + 1] === '>')",
+      "replace": "false",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "A dangling redirection swallows the first word of the next command, so git status loses its name.",
+      "file": "lib/shell.mjs",
+      "find": "    endWord();\n    dropNext = false;\n",
+      "replace": "    endWord();\n",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "A command substitution inside double quotes is no longer scanned, so the quote ends at the first inner double quote and a heredoc body line becomes a command.",
+      "file": "lib/shell.mjs",
+      "find": "if (src[i] === '$' && src[i + 1] === '(') i = scan(src, i + 2, true, commands);",
+      "replace": "if (false) i = scan(src, i + 2, true, commands);",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "Backticks inside double quotes are read as plain text, so a command inside them goes unseen.",
+      "file": "lib/shell.mjs",
+      "find": "else if (src[i] === '`') {",
+      "replace": "else if (false) {",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "A closing parenthesis ends the substitution even when it closes a nested group, so the rest of the quoted text is misread.",
+      "file": "lib/shell.mjs",
+      "find": "if (depth === 0) return i;",
+      "replace": "return i;",
+      "test": "node --test test/shell.test.mjs"
+    },
+    {
+      "fault": "withoutInput keeps the file named after a separate <, so that file still reads as an argument.",
+      "file": "lib/shell.mjs",
+      "find": "!w.startsWith('<') && words[i - 1] !== '<'",
+      "replace": "!w.startsWith('<')",
+      "test": "node --test test/shell.test.mjs"
+    }
+  ]
+}

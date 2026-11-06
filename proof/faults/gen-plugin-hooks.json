@@ -1,0 +1,28 @@
+{
+  "name": "gen-plugin-hooks",
+  "kind": "coordination",
+  "what": "Generates the plugin's hooks file from the hook table and fails its check when the two differ.",
+  "faults": [
+    {
+      "fault": "The generator leaves hooks out of the file, so the plugin ships without them.",
+      "file": "bin/gen-plugin-hooks.mjs",
+      "find": "buildHooks('${CLAUDE_PLUGIN_ROOT}')",
+      "replace": "buildHooks('${CLAUDE_PLUGIN_ROOT}', ['step-budget', 'git-guard'])",
+      "test": "node --test test/gen-plugin-hooks.test.mjs"
+    },
+    {
+      "fault": "The check always passes, so a stale hooks file goes unnoticed.",
+      "file": "bin/gen-plugin-hooks.mjs",
+      "find": "if (have === want) return 0;",
+      "replace": "return 0;",
+      "test": "node --test test/gen-plugin-hooks.test.mjs"
+    },
+    {
+      "fault": "Hook commands use the project folder variable, so they point outside the installed plugin.",
+      "file": "bin/gen-plugin-hooks.mjs",
+      "find": "buildHooks('${CLAUDE_PLUGIN_ROOT}')",
+      "replace": "buildHooks('${CLAUDE_PROJECT_DIR}')",
+      "test": "node --test test/gen-plugin-hooks.test.mjs"
+    }
+  ]
+}

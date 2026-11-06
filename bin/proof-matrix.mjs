@@ -26,7 +26,7 @@ function copyTree(from, to) {
   }
 }
 
-const statusWord = (code) => (code === 0 ? 'CAUGHT' : code === 1 ? 'MISSED' : 'ERROR');
+const statusWord = (code) => (code === 0 ? 'CAUGHT' : code === 1 ? 'MISSED' : code === 3 ? 'TIMEOUT' : 'ERROR');
 
 function loadTools(dir, only) {
   if (!fs.existsSync(dir)) throw new Error(`${dir} does not exist`);
@@ -49,7 +49,7 @@ function loadTools(dir, only) {
  * Runs every planted fault in a throwaway copy of root, one at a time, and returns
  * { results, total, caught }. The working tree is never touched.
  */
-export function runMatrix({ root = process.cwd(), only = null, faultsDir = 'proof/faults' } = {}) {
+export function runMatrix({ root = process.cwd(), only = null, faultsDir = 'proof/faults', timeout } = {}) {
   const tools = loadTools(path.join(root, faultsDir), only);
   const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-matrix-'));
   const results = [];
@@ -67,12 +67,17 @@ export function runMatrix({ root = process.cwd(), only = null, faultsDir = 'proo
           results.push({ ...base, fault: f.fault, status: 'ERROR', detail: `file ${f.file} does not exist` });
           continue;
         }
-        const { code, message } = plantedFault({ file, find: f.find, replace: f.replace, test: f.test, cwd: copy });
+        const { code, message } = plantedFault({ file, find: f.find, replace: f.replace, test: f.test, cwd: copy, timeout });
         results.push({ ...base, fault: f.fault, status: statusWord(code), detail: code === 0 ? '' : message.split('\n')[0] });
       }
     }
   } finally {
-    fs.rmSync(copy, { recursive: true, force: true });
+    try {
+      fs.rmSync(copy, { recursive: true, force: true });
+    } catch (err) {
+      // On Windows a test process left running after a TIMEOUT still holds its folder.
+      process.stderr.write(`proof-matrix: could not remove ${copy} (${err.code || err.message}); delete it later\n`);
+    }
   }
   const caught = results.filter((r) => r.status === 'CAUGHT').length;
   return { results, total: results.length, caught };

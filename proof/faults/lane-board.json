@@ -30,6 +30,20 @@
       "find": ".filter(([, who]) => who.length > 1)",
       "replace": ".filter(([, who]) => who.length > 0)",
       "test": "node --test test/lane-board.test.mjs"
+    },
+    {
+      "fault": "A deleted worktree folder is read like a live one, so the whole board fails.",
+      "file": "bin/lane-board.mjs",
+      "find": "(fs.existsSync(wt.path) ? laneInfo(wt, base, nowSec) : missingLane(wt))",
+      "replace": "laneInfo(wt, base, nowSec)",
+      "test": "node --test test/lane-board.test.mjs"
+    },
+    {
+      "fault": "Live worktrees are shown as missing.",
+      "file": "bin/lane-board.mjs",
+      "find": "(fs.existsSync(wt.path) ? laneInfo",
+      "replace": "(!fs.existsSync(wt.path) ? laneInfo",
+      "test": "node --test test/lane-board.test.mjs"
     }
   ]
 }

@@ -11,6 +11,24 @@ const script = fileURLToPath(new URL('../hooks/foreground-wait.mjs', import.meta
 const bash = (command, extra = {}) => ({ tool_name: 'Bash', tool_input: { command, ...extra } });
 const denied = (command, env = {}) => check(bash(command), env) !== null;
 
+test('an input redirection is not a file', () => {
+  for (const c of ['node --test a.test.mjs </dev/null', 'node --test a.test.mjs < /dev/null', 'node --test $F </dev/null']) {
+    assert.equal(denied(c), false, c);
+  }
+  assert.equal(denied('node --test </dev/null'), true);
+  assert.equal(denied('node --test test/*.test.mjs </dev/null'), true);
+});
+
+test('--test after the script is the script\'s own option', () => {
+  for (const c of ['node bin/planted-fault.mjs --file a.mjs --find x --replace y --test "npm test"', 'node tool.mjs --test', 'node --trace-warnings tool.mjs --test']) {
+    assert.equal(denied(c), false, c);
+  }
+  for (const c of ['node --test', 'node --trace-warnings --test', 'node --import ./setup.mjs --test', 'node --test-reporter tap --test', 'node -r ./setup.js --test']) {
+    assert.equal(denied(c), true, c);
+  }
+  assert.equal(denied('node --import ./setup.mjs --test a.test.mjs'), false);
+});
+
 test('full test runs are denied in the foreground', () => {
   for (const c of [
     'npm test', 'npm run test', 'pnpm test', 'yarn test', 'pytest', 'python -m pytest',
@@ -41,6 +59,51 @@ test('short runs pass', () => {
     'tsc --noEmit src/a.ts', 'tsc --version', 'ls -la', 'git status', 'echo "npm test"',
     'git commit -m "run npm test then npm run build"',
   ]) assert.equal(check(bash(c), {}), null, c);
+});
+
+test('Playwright, Jest and Vitest filters: one to three name filters are a short run', () => {
+  for (const c of [
+    'npx playwright test checkout', 'npx playwright test -c a.config.js login-flow --reporter=line', 'npx playwright test e2e/a.spec.ts:12',
+    'npx jest src/a.test.js', 'npx jest login', 'npx vitest run src/a.test.ts', 'vitest run login', 'jest --version', 'vitest --help',
+  ]) assert.equal(check(bash(c), {}), null, c);
+  for (const c of [
+    'npx playwright test', 'npx playwright test tests/', 'npx playwright test tests', 'npx playwright test e2e/*', 'npx playwright test a b c d',
+    'npx jest', 'jest', 'npx vitest run', 'vitest run', 'vitest', 'vitest --watch',
+  ]) assert.ok(denied(c), c);
+});
+
+test('a line suffix still names a file', () => {
+  for (const c of ['node --test a.spec.ts:12', 'node --test a.test.mjs:3:5', 'pytest a.py::test_one']) assert.equal(check(bash(c), {}), null, c);
+});
+
+test('a shell variable counts as one file', () => {
+  for (const c of ['node --test $f', 'node --test ${f}', 'node --test --test-reporter=tap $SPECS', 'node --test "$D/a.test.mjs"', 'node --test ${D}/a.test.mjs', 'timeout 60 node --test $f 2>&1 | grep x']) {
+    assert.equal(check(bash(c), {}), null, c);
+  }
+  for (const c of ['node --test $D/*.test.mjs', 'node --test "$D/"', 'node --test $a $b $c $d']) assert.ok(denied(c), c);
+});
+
+test('a redirection does not count as a file to test', () => {
+  const run = (command) => check({ tool_name: 'Bash', tool_input: { command } }, {});
+  for (const c of [
+    'node --test test/a.test.mjs 2>&1 | tail -n 5', 'node --test test/a.test.mjs > out.txt', 'node --test test/a.test.mjs 2>/dev/null',
+    'node --test a.test.mjs b.test.mjs c.test.mjs >> log.txt 2>&1', 'npm test -- test/a.test.js 2>&1 | tail', 'git status 2>&1 | head && node --test test/a.test.mjs 2>&1 | tail',
+  ]) assert.equal(run(c), null, c);
+  for (const c of ['node --test 2>&1 | tail', 'node --test a.test.mjs b.test.mjs c.test.mjs d.test.mjs > out.txt 2>&1', 'npm test 2>&1 | tail']) {
+    assert.notEqual(run(c), null, c);
+  }
+});
+
+test('a watch flag that turns watching off is allowed', () => {
+  for (const c of ['vitest run login --watch=false', 'vitest run login --watch=0']) assert.ok(!denied(c), c);
+  for (const c of ['vitest --watch', 'vitest --watch=true', 'vitest --watch=1']) assert.ok(denied(c), c);
+});
+
+test('the PowerShell tool is checked like Bash', () => {
+  const ps = (command, extra = {}) => check({ tool_name: 'PowerShell', tool_input: { command, ...extra } }, {});
+  assert.match(ps('npm test'), /run_in_background/);
+  assert.equal(ps('npm test', { run_in_background: true }), null);
+  assert.equal(ps('node --test a.test.mjs'), null);
 });
 
 test('run_in_background and other tools are allowed', () => {

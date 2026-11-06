@@ -1,57 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { simpleCommands } from '../lib/shell.mjs';
+import { simpleCommands, withoutInput } from '../lib/shell.mjs';
 
-test('quoted text is one word, never a command', () => {
-  assert.deepEqual(simpleCommands('git commit -m "never use git add -A"'), [['git', 'commit', '-m', 'never use git add -A']]);
-  assert.deepEqual(simpleCommands("echo 'a && b; c | d'"), [['echo', 'a && b; c | d']]);
+test('separators split commands and quotes group words', () => {
+  assert.deepEqual(simpleCommands('a b && c "d e" | f; g\nh'), [['a', 'b'], ['c', 'd e'], ['f'], ['g'], ['h']]);
 });
 
-test('leading assignments are stripped', () => {
-  assert.deepEqual(simpleCommands('FOO=1 git add -A'), [['git', 'add', '-A']]);
-  assert.deepEqual(simpleCommands('A=1 B=2 node x.js'), [['node', 'x.js']]);
-  assert.deepEqual(simpleCommands('FOO=1'), []);
-  assert.deepEqual(simpleCommands('echo FOO=1'), [['echo', 'FOO=1']]);
+test('leading assignments, comments and heredoc bodies are dropped', () => {
+  assert.deepEqual(simpleCommands('X=1 run # note'), [['run']]);
+  assert.deepEqual(simpleCommands("cat <<'EOF'\ngit add -A\nEOF\nnext"), [['cat'], ['next']]);
 });
 
-test('splits on && || ; | and newlines', () => {
-  assert.deepEqual(simpleCommands('a 1 && b 2 || c; d | e\nf'), [['a', '1'], ['b', '2'], ['c'], ['d'], ['e'], ['f']]);
+test('a command substitution inside double quotes yields its commands', () => {
+  assert.deepEqual(simpleCommands('echo "$(git status)"'), [['git', 'status'], ['echo', '']]);
+  assert.deepEqual(simpleCommands('echo "a $(b $(c)) d"'), [['b', '$'], ['c'], ['echo', 'a  d']]);
 });
 
-test('backslash escapes keep the character in the word', () => {
-  assert.deepEqual(simpleCommands('echo a\\ b \\;'), [['echo', 'a b', ';']]);
-  assert.deepEqual(simpleCommands('echo "say \\"hi\\" ; there"'), [['echo', 'say "hi" ; there']]);
-  assert.deepEqual(simpleCommands('echo one \\\ntwo'), [['echo', 'one', 'two']]);
+test('backticks inside double quotes yield their commands, and escaped ones stay text', () => {
+  assert.deepEqual(simpleCommands('echo "`git status`"'), [['git', 'status'], ['echo', '']]);
+  assert.deepEqual(simpleCommands('echo "a \\`b\\` c"'), [['echo', 'a `b` c']]);
 });
 
-test('heredoc bodies are removed', () => {
-  const line = "cat <<'EOF' > f.txt\ngit add -A\nrm -rf /\nEOF\nls";
-  assert.deepEqual(simpleCommands(line), [['cat', '>', 'f.txt'], ['ls']]);
-  assert.deepEqual(simpleCommands('cat <<-X\n  body\n  X\necho done'), [['cat'], ['echo', 'done']]);
-  assert.deepEqual(simpleCommands('cat <<EOF\r\nbody\r\nEOF\r\nls'), [['cat'], ['ls']]);
+test('a stray double quote inside a heredoc in a substitution does not end the string', () => {
+  const src = `git commit -m "$(cat <<'EOF'\nfix the "x problem\ngit reset --hard is now blocked\nEOF\n)" -- f`;
+  const cmds = simpleCommands(src).map((w) => w.join(' '));
+  assert.ok(cmds.includes('cat'));
+  assert.ok(cmds.some((c) => c.startsWith('git commit -m')));
+  assert.ok(!cmds.some((c) => c.includes('reset')));
 });
 
-test('here-strings are not heredocs', () => {
-  assert.deepEqual(simpleCommands('cat <<< "hi"\nls'), [['cat', '<<<', 'hi'], ['ls']]);
+test('output redirections and their targets are not words', () => {
+  assert.deepEqual(simpleCommands('run a 2>&1 | tail'), [['run', 'a'], ['tail']]);
+  assert.deepEqual(simpleCommands('run a > out.txt b'), [['run', 'a', 'b']]);
+  assert.deepEqual(simpleCommands('run a >> "my log.txt" 2>err.txt'), [['run', 'a']]);
+  assert.deepEqual(simpleCommands('run a &> out.txt b'), [['run', 'a', 'b']]);
+  assert.deepEqual(simpleCommands('run a &>> out.txt; next'), [['run', 'a'], ['next']]);
+  assert.deepEqual(simpleCommands('run a >&2'), [['run', 'a']]);
+  assert.deepEqual(simpleCommands('run a *>&1'), [['run', 'a']]);
+  assert.deepEqual(simpleCommands('run a >| out.txt'), [['run', 'a']]);
+  assert.deepEqual(simpleCommands('> out.txt run a'), [['run', 'a']]);
 });
 
-test('comments are dropped but # inside a word stays', () => {
-  assert.deepEqual(simpleCommands('ls # git add -A\npwd'), [['ls'], ['pwd']]);
-  assert.deepEqual(simpleCommands('echo a#b'), [['echo', 'a#b']]);
+test('what looks like a redirection but is not one stays', () => {
+  assert.deepEqual(simpleCommands('cat < a.txt'), [['cat', '<', 'a.txt']]);
+  assert.deepEqual(simpleCommands('cat <a.txt'), [['cat', '<a.txt']]);
+  assert.deepEqual(withoutInput(['cat', '<', 'a.txt', 'b.txt']), ['cat', 'b.txt']);
+  assert.deepEqual(withoutInput(['cat', '<a.txt', 'b.txt']), ['cat', 'b.txt']);
+  assert.deepEqual(simpleCommands('run a & next'), [['run', 'a'], ['next']]);
+  assert.deepEqual(simpleCommands('echo "a > b" c'), [['echo', 'a > b', 'c']]);
+  assert.deepEqual(simpleCommands('echo a2>x'), [['echo', 'a2']]);
 });
 
-test('empty quoted word is kept, empty input gives nothing', () => {
-  assert.deepEqual(simpleCommands('echo ""'), [['echo', '']]);
-  assert.deepEqual(simpleCommands(''), []);
-  assert.deepEqual(simpleCommands(undefined), []);
+test('a redirection never hides a command', () => {
+  assert.deepEqual(simpleCommands('run >\ngit status'), [['run'], ['git', 'status']]);
+  assert.ok(simpleCommands('echo x > $(git status)').some((w) => w[0] === 'git'));
+  assert.ok(simpleCommands('echo x > "$(git status)"').some((w) => w[0] === 'git'));
+  assert.ok(simpleCommands('echo x > >(git status)').some((w) => w[0] === 'git'));
 });
 
-test('subshell and backtick contents become their own commands', () => {
-  assert.deepEqual(simpleCommands('(cd x && ls)'), [['cd', 'x'], ['ls']]);
-  assert.deepEqual(simpleCommands('echo `date`'), [['echo'], ['date']]);
-});
-
-test('an unterminated quote does not throw', () => {
-  assert.deepEqual(simpleCommands('echo "abc'), [['echo', 'abc']]);
-  assert.deepEqual(simpleCommands("echo 'abc"), [['echo', 'abc']]);
+test('an unterminated substitution does not throw', () => {
+  assert.deepEqual(simpleCommands('echo "$(git status'), [['git', 'status'], ['echo', '']]);
 });

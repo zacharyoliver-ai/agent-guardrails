@@ -2,9 +2,9 @@
 
 Ten practices that keep a crowd of agents from stepping on each other. Each one ends with the tool in this repo that enforces it.
 
-1. **Give each agent its own files and worktree.** Two agents in one folder will overwrite each other sooner or later. Hand every agent a lane, a list of paths it may edit, and a separate worktree to edit them in. A board that shows who holds which lane saves a lot of asking around. Enforced by [file-ownership](../hooks/file-ownership.mjs) and [lane-board](../bin/lane-board.mjs).
+1. **Give each agent its own files and worktree.** Two agents in one folder will overwrite each other sooner or later. Hand every agent a lane, a list of paths it may edit, and a separate worktree to edit them in (the [split-the-work](../skills/split-the-work/SKILL.md) skill cuts a task that way). A board that shows who holds which lane saves a lot of asking around. Enforced by [file-ownership](../hooks/file-ownership.mjs) and [lane-board](../bin/lane-board.mjs).
 
-2. **Use the cheapest model that can do the job.** A lookup does not need the largest model, and a security review should not go to the smallest. Make every subagent call name a model, and check the name against the job in its description. Enforced by [model-ladder](../hooks/model-ladder.mjs).
+2. **Use the cheapest model that can do the job.** A lookup does not need the largest model, and a security review should not go to the smallest. Make every subagent call name a model, and check the name against the job in its description. The plugin's [agents](../agents/) already pick one each. Enforced by [model-ladder](../hooks/model-ladder.mjs).
 
 3. **Cap steps and how many run at once.** An agent with no step limit will keep going long after it has stopped being useful. Give each one a budget with a warning near the end, so it can write a hand-off while it still can. Put a ceiling on how many subagents run together too. Enforced by [step-budget](../hooks/step-budget.mjs) and [fleet-cap](../hooks/fleet-cap.mjs).
 
@@ -14,7 +14,7 @@ Ten practices that keep a crowd of agents from stepping on each other. Each one 
 
 6. **Plant a fault in any test you rely on.** Change one line of the code under test so it is wrong, then run the test. If it still passes, it was never checking anything. A second tool lists tests that contain no assertion at all. Enforced by [planted-fault](../bin/planted-fault.mjs) and [find-vacuous-tests](../bin/find-vacuous-tests.mjs).
 
-7. **Stage named files only, and never print a secret.** `git add -A` sweeps up other agents' work, and a token echoed into a log stays there. Block both before they happen, and block statements that rewrite a whole protected table at once. Enforced by [git-guard](../hooks/git-guard.mjs), [secret-guard](../hooks/secret-guard.mjs) and [bulk-write-gate](../hooks/bulk-write-gate.mjs).
+7. **Stage named files only, and never print a secret.** `git add -A` sweeps up other agents' work, and a token echoed into a log stays there. Block both before they happen, and block statements that rewrite a whole protected table at once. [replay](../bin/replay.mjs) shows how often your own past sessions would have hit these. Enforced by [git-guard](../hooks/git-guard.mjs), [secret-guard](../hooks/secret-guard.mjs) and [bulk-write-gate](../hooks/bulk-write-gate.mjs).
 
 8. **Keep one rulings file that every session reads.** When a person decides something, it goes in one file. Running sessions see each change at their next prompt, so nobody has to say it twice. A design agent can be held to screen files so that its work is easy to review. Enforced by [decisions-file](../hooks/decisions-file.mjs) and [design-seat](../hooks/design-seat.mjs).
 

@@ -30,6 +30,90 @@
       "find": "files.length < 1 ||",
       "replace": "files.length < 2 ||",
       "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "The PowerShell tool is no longer inspected, so a full test run passes there.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "input.tool_name !== 'Bash' && input.tool_name !== 'PowerShell'",
+      "replace": "input.tool_name !== 'Bash'",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "--watch=false is treated as a watcher and refused.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "!/^--watch=(?:false|0)$/.test(x)",
+      "replace": "true",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "--watch=true is accepted along with --watch=false.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "(?:false|0)$/.test(x)",
+      "replace": "(?:false|0|true)$/.test(x)",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "Playwright is judged by file extensions again, so a plain name filter such as checkout is refused.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "fewFilters(w.slice(2))",
+      "replace": "fewFiles(w.slice(2))",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A whole-folder word such as tests no longer counts as a full run, so npx playwright test tests passes.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": " && !BROAD_FILTERS.has(f)",
+      "replace": "",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "Jest and Vitest runs are no longer checked, so a full run of either passes.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "if (cmd === 'jest' || cmd === 'vitest') {",
+      "replace": "if (false) {",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A :line suffix no longer makes a name a file, so node --test a.spec.ts:12 counts as a full run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "(?::\\d+(?::\\d+)?|::.*)?$/;",
+      "replace": "(?:::.*)?$/;",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A shell variable no longer counts as a file, so node --test $f counts as a full run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": " || SHELL_VAR.test(f)",
+      "replace": "",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "The braces of ${NAME} are read as a glob, so node --test ${D}/a.test.mjs counts as a full run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "GLOB.test(f.replace(/\\$\\{\\w+\\}/g, ''))",
+      "replace": "GLOB.test(f)",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A --test flag after the script counts as node's own, so a script with its own --test option is refused.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "else if (!args[i].startsWith('-')) return false;",
+      "replace": "",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A value flag's value reads as the script, so node --import x --test passes as an ordinary script run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "if (args[i] === '--test') return true;\n    if (VALUE_FLAGS.has(args[i])) i++;\n    else if",
+      "replace": "if (args[i] === '--test') return true;\n    if",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "An input redirection counts as a file, so node --test a.test.mjs </dev/null is refused.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "unwrap(withoutInput(words))",
+      "replace": "unwrap(words)",
+      "test": "node --test test/foreground-wait.test.mjs"
     }
   ]
 }

@@ -6,14 +6,14 @@ import { plantedFault } from './planted-fault.mjs';
 
 const slashes = (p) => String(p).replace(/\\/g, '/');
 
-/** Maps a plantedFault exit code to a status word. */
+/** Maps a plantedFault exit code to a status word. A timeout (3) proves nothing, so it is UNPROVEN like any setup problem. */
 export function statusOf(code) {
   if (code === 0) return 'PROVEN';
   if (code === 1) return 'MISSED';
   return 'UNPROVEN';
 }
 
-function proveLine(line, root) {
+function proveLine(line, root, timeout) {
   const { test, fault } = line;
   if (!test || typeof test !== 'string') return { status: 'UNPROVEN', detail: 'no test named' };
   if (!fault || !fault.file || !fault.find || fault.replace === undefined) {
@@ -21,7 +21,7 @@ function proveLine(line, root) {
   }
   const file = path.resolve(root, fault.file);
   if (!fs.existsSync(file)) return { status: 'UNPROVEN', detail: `fault file ${fault.file} does not exist` };
-  const { code, message } = plantedFault({ file, find: fault.find, replace: fault.replace, test, cwd: root });
+  const { code, message } = plantedFault({ file, find: fault.find, replace: fault.replace, test, cwd: root, timeout });
   return { status: statusOf(code), detail: code === 0 ? '' : message.split('\n')[0] };
 }
 
@@ -45,14 +45,14 @@ function loadContracts(dir) {
  * Proves every always/never line of every contract in dir.
  * With `changed`, only contracts whose fault files include one of those paths are re-proved.
  */
-export function checkContracts({ dir = 'contracts', root = process.cwd(), changed = null } = {}) {
+export function checkContracts({ dir = 'contracts', root = process.cwd(), changed = null, timeout } = {}) {
   const results = [];
   const touched = changed && new Set(changed.map((c) => slashes(path.relative(root, path.resolve(root, c)))));
   for (const c of loadContracts(path.resolve(root, dir))) {
     const lines = [...(c.always || []).map((l) => ['always', l]), ...(c.never || []).map((l) => ['never', l])];
     if (touched && !lines.some(([, l]) => l.fault && touched.has(slashes(path.relative(root, path.resolve(root, l.fault.file || '')))))) continue;
     for (const [kind, line] of lines) {
-      results.push({ feature: c.feature, kind, rule: line.rule, ...proveLine(line, root) });
+      results.push({ feature: c.feature, kind, rule: line.rule, ...proveLine(line, root, timeout) });
     }
   }
   return results;

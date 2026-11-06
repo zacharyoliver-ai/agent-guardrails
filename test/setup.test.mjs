@@ -25,13 +25,14 @@ test('creates the settings file with every hook under its own event and matcher'
   assert.equal(r.status, 0);
   const hooks = read(dir).hooks;
   const find = (event, name) => hooks[event].find((g) => g.hooks[0].command.includes(`/hooks/${name}.mjs`));
-  assert.equal(find('PreToolUse', 'git-guard').matcher, 'Bash');
+  assert.equal(find('PreToolUse', 'git-guard').matcher, 'Bash|PowerShell');
   assert.equal(find('PreToolUse', 'step-budget').matcher, '*');
   assert.ok(find('Stop', 'never-say'));
+  assert.ok(find('SubagentStart', 'fleet-cap'));
   assert.ok(find('SubagentStop', 'fleet-cap'));
   assert.ok(find('UserPromptSubmit', 'decisions-file'));
   assert.match(find('PreToolUse', 'git-guard').hooks[0].command, new RegExp(`node "${root.replace(/\\/g, '/').replace(/\/$/, '')}/hooks/git-guard.mjs"`));
-  assert.match(r.stdout, /added git-guard \(PreToolUse Bash\)/);
+  assert.match(r.stdout, /added git-guard \(PreToolUse Bash\|PowerShell\)/);
 });
 
 test('running twice adds nothing the second time', () => {
@@ -102,7 +103,7 @@ test('mergeHooks does not change its input', () => {
 });
 
 test('every hook file has a table row, and every row has a hook file', () => {
-  const files = fs.readdirSync(path.join(root, 'hooks')).map((f) => f.replace(/\.mjs$/, '')).sort();
+  const files = fs.readdirSync(path.join(root, 'hooks')).filter((f) => f.endsWith('.mjs')).map((f) => f.replace(/\.mjs$/, '')).sort();
   assert.deepEqual(HOOKS.map((h) => h.name).sort(), files);
 });
 

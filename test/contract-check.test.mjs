@@ -38,6 +38,7 @@ test('statusOf maps each exit code', () => {
   assert.equal(statusOf(0), 'PROVEN');
   assert.equal(statusOf(1), 'MISSED');
   assert.equal(statusOf(2), 'UNPROVEN');
+  assert.equal(statusOf(3), 'UNPROVEN');
 });
 
 test('a line whose test fails on the fault is PROVEN', () => {
@@ -108,4 +109,13 @@ test('cli: a missing folder, bad JSON and an unknown option exit 2', () => {
   assert.equal(run('--bogus').status, 2);
   fs.writeFileSync(path.join(dir, 'contracts', 'bad.json'), '{nope');
   assert.equal(run().status, 2);
+});
+
+test('a line whose fault makes the test hang is UNPROVEN with a TIMEOUT detail', () => {
+  const dir = project(contract([{ rule: 'waits', test: 'node --test wait.test.mjs', fault: { file: 'wait.mjs', find: 'r, 0)', replace: 'r, 6000)' } }]));
+  fs.writeFileSync(path.join(dir, 'wait.mjs'), 'export const wait = () => new Promise((r) => setTimeout(r, 0));\n');
+  fs.writeFileSync(path.join(dir, 'wait.test.mjs'), "import test from 'node:test';\nimport { wait } from './wait.mjs';\ntest('waits', async () => { await wait(); });\n");
+  const [r] = checkContracts({ root: dir, timeout: 3 });
+  assert.equal(r.status, 'UNPROVEN');
+  assert.match(r.detail, /^TIMEOUT/);
 });

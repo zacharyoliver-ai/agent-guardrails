@@ -1,6 +1,6 @@
 # agent-guardrails
 
-![Node 18 or newer](https://img.shields.io/badge/node-%3E%3D18-3c873a) ![No dependencies](https://img.shields.io/badge/dependencies-0-2f6feb) ![MIT license](https://img.shields.io/badge/license-MIT-2f6feb) ![Planted faults](https://img.shields.io/badge/planted%20faults-FAULT_TOTAL-2f6feb)
+![Node 18.11 or newer](https://img.shields.io/badge/node-%3E%3D18.11-3c873a) ![No dependencies](https://img.shields.io/badge/dependencies-0-2f6feb) ![MIT license](https://img.shields.io/badge/license-MIT-2f6feb) ![Planted faults](https://img.shields.io/badge/planted%20faults-190-2f6feb)
 <!-- ci-badge -->
 
 Hooks and command-line tools for running many AI coding agents at once, with a planted bug behind every guard to show it works.
@@ -23,6 +23,12 @@ node agent-guardrails/demo/run.mjs
 It needs no Claude and no network. Each hook runs on sample input, and you see what the agent tried and what the guard did. The last scene breaks a guard on purpose, in a throwaway copy, and shows its own test catching it.
 
 ![Terminal output: calls denied with a reason, calls allowed, and a planted fault caught](docs/demo.svg)
+
+To see what the guards would have done over your own last week of sessions, run this. It installs nothing and writes nothing.
+
+```
+node bin/replay.mjs --since 7d
+```
 
 ## What's inside
 
@@ -53,6 +59,7 @@ It needs no Claude and no network. Each hook runs on sample input, and you see w
 
 | Tool | What it does |
 | --- | --- |
+| [replay](bin/replay.mjs) | Counts what the guards would have denied in your past sessions. |
 | [planted-fault](bin/planted-fault.mjs) | Breaks your code on purpose and checks that your test notices. |
 | [proof-matrix](bin/proof-matrix.mjs) | Runs every planted fault in this repo in a throwaway copy. |
 | [contract-check](bin/contract-check.mjs) | Marks a contract line proven only when its test fails on a broken copy. |
@@ -69,17 +76,39 @@ It needs no Claude and no network. Each hook runs on sample input, and you see w
 | [lane-board](bin/lane-board.mjs) | Shows which files each worktree is changing and where lanes overlap. |
 | [setup](bin/setup.mjs) | Adds the hooks you pick to a project's Claude Code settings. |
 
+**Agents and skills** come with the plugin.
+
+| Tool | What it does |
+| --- | --- |
+| [scout](agents/scout.md) | Looks things up, read-only, on the cheapest model. |
+| [builder](agents/builder.md) | Builds what a test can prove, in the files its brief names. |
+| [reviewer](agents/reviewer.md) | Reviews a diff on the top model and runs each claim first. |
+| [plant-a-fault](skills/plant-a-fault/SKILL.md) | Writes a fault file and runs it against a test. |
+| [write-a-contract](skills/write-a-contract/SKILL.md) | Writes always and never lines, each tied to its test. |
+| [split-the-work](skills/split-the-work/SKILL.md) | Cuts a task into briefs with one owner per file. |
+
 ## Proof
 
-A planted fault is a bug we put into a tool on purpose, in one exact place. We run that tool's own test against it, and the test has to fail. The repo carries FAULT_TOTAL planted faults across TOOL_TOTAL tools, listed with their results in [PROOF.md](PROOF.md), and CI re-runs all of them on Windows, macOS and Linux.
+A planted fault is a bug we put into a tool on purpose, in one exact place. We run that tool's own test against it, and the test has to fail. The repo carries 190 planted faults across 28 tools, listed with their results in [PROOF.md](PROOF.md), and CI re-runs all of them on Windows, macOS and Linux.
 
 ```
 node bin/proof-matrix.mjs --check
 ```
 
+The guards that judge a call on its own have also been replayed over more than 1.2 million recorded tool calls from our own sessions. [Results](docs/results.md#replay-over-real-sessions) has the detail.
+
 ## Quick start
 
-Needs Node 18 or later.
+Needs Node 18.11 or later.
+
+The plugin is the quick way, and it turns on every hook:
+
+```
+/plugin marketplace add zacharyoliver-ai/agent-guardrails
+/plugin install agent-guardrails@agent-guardrails
+```
+
+The clone route lets you pick which guards to turn on:
 
 ```
 git clone https://github.com/zacharyoliver-ai/agent-guardrails
@@ -94,6 +123,7 @@ That adds every hook to `../your-app/.claude/settings.json`, using absolute path
 - Hooks fail open. Input a hook cannot parse, or an error inside it, allows the call and writes one line to stderr.
 - Config is optional. Every hook has a default that works, and an environment variable changes it.
 - A deny reason says what to do next, so the agent can change course.
+- These guards catch mistakes by agents acting in good faith. They aren't a sandbox; [SECURITY.md](SECURITY.md) says more.
 
 To change a limit, set its variable on the hook's command:
 
@@ -114,6 +144,7 @@ node --test
 - [How to run many coding agents at once](docs/playbook.md)
 - [Results from building Awnitboss](docs/results.md)
 - [PROOF.md](PROOF.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 

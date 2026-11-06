@@ -18,10 +18,24 @@
       "test": "node --test test/model-ladder.test.mjs"
     },
     {
-      "fault": "Word boundaries are dropped, so \"listen\" and \"account\" count as lookup words.",
+      "fault": "The end-of-word boundary is dropped, so \"listen\" counts as the lookup word \"list\".",
       "file": "hooks/model-ladder.mjs",
-      "find": "`(?<![A-Za-z0-9])${body}(?![A-Za-z0-9])`",
-      "replace": "body",
+      "find": "${body}(?![A-Za-z0-9])`",
+      "replace": "${body}`",
+      "test": "node --test test/model-ladder.test.mjs"
+    },
+    {
+      "fault": "Lookup words count anywhere in the description again, so a noun such as \"folder list\" sends a build job to the cheap model.",
+      "file": "hooks/model-ladder.mjs",
+      "find": "hasWord(text, cfg.lookupWords, true)",
+      "replace": "hasWord(text, cfg.lookupWords)",
+      "test": "node --test test/model-ladder.test.mjs"
+    },
+    {
+      "fault": "Read-only agent types are no longer excused, so a scout that names a review in passing is refused a cheap model.",
+      "file": "hooks/model-ladder.mjs",
+      "find": "review && !readOnly ?",
+      "replace": "review ?",
       "test": "node --test test/model-ladder.test.mjs"
     }
   ]

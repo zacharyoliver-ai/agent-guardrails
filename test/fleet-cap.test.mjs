@@ -19,6 +19,51 @@ const start = (model, session = 's1', type = 'general') => ({
 });
 const stop = (type = 'general', session = 's1') => ({ session_id: session, hook_event_name: 'SubagentStop', agent_id: 'a', agent_type: type });
 
+const began = (type = 'general', id = 'a', session = 's1') => ({ session_id: session, hook_event_name: 'SubagentStart', agent_id: id, agent_type: type });
+// A call that PreToolUse recorded and SubagentStart confirmed.
+const begin = (model, env, now, id, type = 'general') => {
+  const r = checkFleet(start(model, 's1', type), env, now);
+  checkFleet(began(type, id), env, now);
+  return r;
+};
+const read = (env) => JSON.parse(fs.readFileSync(path.join(env.GUARDRAILS_STATE_DIR, 'fleet-s1.json'), 'utf8'));
+
+test('a call another hook denied frees its slot after 60 seconds', () => {
+  const env = { GUARDRAILS_STATE_DIR: tmp() };
+  for (let i = 0; i < 3; i++) checkFleet(start('opus'), env, 0);
+  assert.match(checkFleet(start('opus'), env, 59000), /cap is 3/);
+  assert.equal(checkFleet(start('opus'), env, 60000), null);
+});
+
+test('a started agent still holds its slot after 60 seconds', () => {
+  const env = { GUARDRAILS_STATE_DIR: tmp() };
+  for (let i = 0; i < 3; i++) begin('opus', env, 0, `ag${i}`);
+  assert.match(checkFleet(start('opus'), env, 61000), /cap is 3/);
+  assert.match(checkFleet(start('opus'), env, 3600000), /cap is 3/);
+});
+
+test('SubagentStart then stop by agent_id frees exactly that agent', () => {
+  const env = { GUARDRAILS_STATE_DIR: tmp() };
+  begin('opus', env, 1, 'x', 'same');
+  begin('opus', env, 2, 'y', 'same');
+  checkFleet({ ...stop('same'), agent_id: 'y' }, env, 3);
+  assert.deepEqual(read(env).map((e) => e.agent_id), ['x']);
+});
+
+test('three opus starts then a fourth call is denied', () => {
+  const env = { GUARDRAILS_STATE_DIR: tmp() };
+  for (let i = 0; i < 3; i++) assert.equal(begin('opus', env, 0, `ag${i}`), null);
+  assert.match(checkFleet(start('opus'), env, 1000), /3 expensive-model/);
+});
+
+test('SubagentStart prefers a pending entry of its own type', () => {
+  const env = { GUARDRAILS_STATE_DIR: tmp() };
+  checkFleet(start('sonnet', 's1', 'a'), env, 1);
+  checkFleet(start('sonnet', 's1', 'b'), env, 2);
+  checkFleet(began('b', 'idb'), env, 3);
+  assert.deepEqual(read(env).map((e) => [e.subagent_type, e.state]), [['a', 'pending'], ['b', 'running']]);
+});
+
 test('other tools pass and record nothing', () => {
   const env = { GUARDRAILS_STATE_DIR: tmp() };
   assert.equal(checkFleet({ session_id: 's1', tool_name: 'Bash', tool_input: {} }, env), null);
@@ -56,12 +101,12 @@ test('a denied call records nothing', () => {
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).length, 3);
 });
 
-test('entries carry tool_use_id, tier, subagent_type and startedAt', () => {
+test('entries carry tool_use_id, tier, subagent_type, startedAt and state', () => {
   const env = { GUARDRAILS_STATE_DIR: tmp() };
   const input = start('opus', 's1', 'reviewer');
   checkFleet(input, env, 5000);
-  const [e] = JSON.parse(fs.readFileSync(path.join(env.GUARDRAILS_STATE_DIR, 'fleet-s1.json'), 'utf8'));
-  assert.deepEqual(e, { tool_use_id: input.tool_use_id, tier: 'expensive', subagent_type: 'reviewer', startedAt: 5000 });
+  const [e] = read(env);
+  assert.deepEqual(e, { tool_use_id: input.tool_use_id, tier: 'expensive', subagent_type: 'reviewer', startedAt: 5000, state: 'pending' });
 });
 
 test('separate sessions do not share counts', () => {
@@ -97,14 +142,14 @@ test('SubagentStop with nothing recorded is harmless', () => {
 
 test('a cap frees after expiry', () => {
   const env = { GUARDRAILS_STATE_DIR: tmp(), GUARDRAILS_FLEET_TTL_MIN: '10' };
-  for (let i = 0; i < 3; i++) checkFleet(start('opus'), env, 0);
+  for (let i = 0; i < 3; i++) begin('opus', env, 0, `ag${i}`);
   assert.match(checkFleet(start('opus'), env, 9 * 60000), /cap is 3/);
   assert.equal(checkFleet(start('opus'), env, 10 * 60000), null);
 });
 
 test('the default expiry is 120 minutes', () => {
   const env = { GUARDRAILS_STATE_DIR: tmp() };
-  for (let i = 0; i < 3; i++) checkFleet(start('opus'), env, 0);
+  for (let i = 0; i < 3; i++) begin('opus', env, 0, `ag${i}`);
   assert.match(checkFleet(start('opus'), env, 119 * 60000), /cap is 3/);
   assert.equal(checkFleet(start('opus'), env, 120 * 60000), null);
 });

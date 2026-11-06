@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -69,6 +70,12 @@ export function laneInfo(wt, base, nowSec) {
   };
 }
 
+// A worktree whose folder was deleted is still listed by git; showing it keeps one dead entry from hiding the rest.
+function missingLane(wt) {
+  const label = wt.branch || path.posix.basename(wt.path);
+  return { path: wt.path, label, branch: wt.branch || '(detached)', missing: true, ahead: 0, behind: 0, files: [], age: '' };
+}
+
 export function findOverlaps(lanes) {
   const byFile = new Map();
   for (const lane of lanes) {
@@ -79,13 +86,17 @@ export function findOverlaps(lanes) {
 
 export function buildBoard(root, baseArg, nowSec = Math.floor(Date.now() / 1000)) {
   const base = resolveBase(root, baseArg);
-  const lanes = parseWorktrees(git(root, ['worktree', 'list', '--porcelain'])).map((wt) => laneInfo(wt, base, nowSec));
+  const lanes = parseWorktrees(git(root, ['worktree', 'list', '--porcelain'])).map((wt) => (fs.existsSync(wt.path) ? laneInfo(wt, base, nowSec) : missingLane(wt)));
   return { base, lanes, overlaps: findOverlaps(lanes) };
 }
 
 export function formatBoard(board) {
   const out = [`Base: ${board.base}`, '', 'LANES'];
   for (const l of board.lanes) {
+    if (l.missing) {
+      out.push(l.path, `  missing: the folder is gone (branch ${l.branch}); git worktree prune clears the entry`);
+      continue;
+    }
     out.push(l.path, `  branch ${l.branch}  ahead ${l.ahead}  behind ${l.behind}  last commit ${l.age} ago`);
     out.push(l.files.length ? `  changed (${l.files.length}): ${l.files.join(', ')}` : '  changed: none');
   }

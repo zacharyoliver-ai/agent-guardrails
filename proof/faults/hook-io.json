@@ -1,0 +1,42 @@
+{
+  "name": "hook-io",
+  "kind": "guard",
+  "what": "A hook's state file is replaced whole, and a moment's lock on Windows does not lose the write.",
+  "faults": [
+    {
+      "fault": "A refused rename is not tried again, so a moment's lock on Windows loses the write.",
+      "file": "lib/hook-io.mjs",
+      "find": "if (tries >= RENAME_TRIES || !BUSY.has(err.code)) {",
+      "replace": "if (true) {",
+      "test": "node --test test/hook-io.test.mjs"
+    },
+    {
+      "fault": "EPERM, the error Windows gives for a held file, is not treated as a moment's lock.",
+      "file": "lib/hook-io.mjs",
+      "find": "new Set(['EPERM', 'EACCES', 'EBUSY'])",
+      "replace": "new Set(['EACCES', 'EBUSY'])",
+      "test": "node --test test/hook-io.test.mjs"
+    },
+    {
+      "fault": "Every error is tried again, so a full disk holds the hook up.",
+      "file": "lib/hook-io.mjs",
+      "find": "tries >= RENAME_TRIES || !BUSY.has(err.code)",
+      "replace": "tries >= RENAME_TRIES",
+      "test": "node --test test/hook-io.test.mjs"
+    },
+    {
+      "fault": "A write that gives up leaves its temporary file behind.",
+      "file": "lib/hook-io.mjs",
+      "find": "fs.rmSync(tmp, { force: true });",
+      "replace": "",
+      "test": "node --test test/hook-io.test.mjs"
+    },
+    {
+      "fault": "The number of tries changes, so a long lock waits longer or a short one is lost.",
+      "file": "lib/hook-io.mjs",
+      "find": "const RENAME_TRIES = 20;",
+      "replace": "const RENAME_TRIES = 2;",
+      "test": "node --test test/hook-io.test.mjs"
+    }
+  ]
+}

@@ -30,6 +30,27 @@
       "find": "const restore = () => fs.writeFileSync(file, original);",
       "replace": "const restore = () => {};",
       "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "The test run has no time limit, so a fault that hangs the test hangs the tool.",
+      "file": "bin/planted-fault.mjs",
+      "find": "encoding: 'utf8', timeout: timeoutS * 1000 }",
+      "replace": "encoding: 'utf8' }",
+      "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "A run killed by a signal is reported as CAUGHT.",
+      "file": "bin/planted-fault.mjs",
+      "find": "const cutShort = (r) => r.status === null || Boolean(r.error);",
+      "replace": "const cutShort = () => false;",
+      "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "The clean run gets the small limit too, so a slow machine reads as a setup problem.",
+      "file": "bin/planted-fault.mjs",
+      "find": "const firstLimit = Math.max(timeout, DEFAULT_TIMEOUT_S);",
+      "replace": "const firstLimit = timeout;",
+      "test": "node --test test/planted-fault.test.mjs"
     }
   ]
 }

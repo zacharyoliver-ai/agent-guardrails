@@ -4,6 +4,20 @@
   "what": "A SQL write that would change every row of a table is refused unless the statement carries a bulk-ok comment with a reason.",
   "faults": [
     {
+      "fault": "A heredoc piped into a client is skipped, so cat <<EOF | psql walks past the gate.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "!CLIENT_WORD.test(owner) && !PIPED_INTO_CLIENT.test(pipedOn)",
+      "replace": "!CLIENT_WORD.test(owner)",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "Every heredoc on a line with a client counts as SQL, so a note written to a file is refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "!CLIENT_WORD.test(owner) && !PIPED_INTO_CLIENT.test(pipedOn)",
+      "replace": "false",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
       "fault": "A WHERE clause that is always true, such as 1=1, is accepted as a real filter.",
       "file": "hooks/bulk-write-gate.mjs",
       "find": "if (cond === null || alwaysTrue(cond))",
@@ -36,6 +50,97 @@
       "file": "hooks/bulk-write-gate.mjs",
       "find": "if (verb === 'truncate')",
       "replace": "if (verb === 'truncatee')",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "The PowerShell tool is no longer read, so a delete through Invoke-Sqlcmd passes.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') {",
+      "replace": "if (input.tool_name === 'Bash') {",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "curl is no longer exempt, so a request body that mentions SQL is refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "'find', 'curl', 'wget']",
+      "replace": "'find']",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "Every command on a line with a SQL client is scanned, so prose in a neighbouring command is refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "const clients = cmds.filter(isClient);",
+      "replace": "const clients = cmds.some(isClient) ? cmds : [];",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "SQL files handed to a client with -f or < are never read, so their statements pass.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (text !== null) texts.push([text, false]);",
+      "replace": "if (false) texts.push([text, false]);",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "A backslash inside an E-string no longer escapes the quote, so the string ends early and a statement hidden after it is missed.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "i += sql[i] === \"'\" || (escapes && sql[i] === '\\\\') ? 2 : 1;",
+      "replace": "i += sql[i] === \"'\" ? 2 : 1;",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "Text piped into a client is not scanned, so echo piped to psql passes.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (PIPED_INTO_CLIENT.test(command)) {",
+      "replace": "if (false) {",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "A heredoc is attributed to a client that appears earlier on the same line, so a commit message heredoc is refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": ".slice(0, m.index).split(/&&|\\|\\||[;|&(`]/).pop()",
+      "replace": ".slice(0, m.index)",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "GRANT TRUNCATE ON is read as emptying a table named ON.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "(?!(?:on|and|or|from|to|the|in|of|is|for|with)\\\\b)",
+      "replace": "",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "The check for prose skips every name after TRUNCATE, so a real one passes.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "(?!(?:on|and|or|from|to|the|in|of|is|for|with)\\\\b)",
+      "replace": "(?!\\\\w)",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "xargs is read as the command, so a search it runs is refused as SQL.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "while (LAUNCHERS.has(x[0]) || x[0] === 'xargs') x = x[0] === 'xargs' ? afterXargs(x) : x.slice(1);",
+      "replace": "while (LAUNCHERS.has(x[0])) x = x.slice(1);",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "Whatever xargs runs is ignored, so a SQL client behind it passes.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "x[0] === 'xargs' ? afterXargs(x) : x.slice(1)",
+      "replace": "x[0] === 'xargs' ? [] : x.slice(1)",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "The value of an xargs flag is read as the command it runs.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "i += /^-[nIPLsdEa]$/.test(words[i]) ? 2 : 1;",
+      "replace": "i += 1;",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "SQL piped through xargs into a client is not checked.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "exec|npx|xargs)",
+      "replace": "exec|npx)",
       "test": "node --test test/bulk-write-gate.test.mjs"
     }
   ]

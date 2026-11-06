@@ -6,8 +6,8 @@
     {
       "fault": "Job time rounds down, so the total is always short.",
       "file": "bin/ci-minutes.mjs",
-      "find": "total += Math.ceil((end - start) / 60000);",
-      "replace": "total += Math.floor((end - start) / 60000);",
+      "find": "Math.ceil((end - start) / 60000) * multiplier",
+      "replace": "Math.floor((end - start) / 60000) * multiplier",
       "test": "node --test test/ci-minutes.test.mjs"
     },
     {
@@ -29,6 +29,41 @@
       "file": "bin/ci-minutes.mjs",
       "find": "if (run.status === 'completed' && cacheFile) cache[run.id] = minutes;",
       "replace": "if (cacheFile) cache[run.id] = minutes;",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "Windows and macOS minutes are counted at the Linux rate.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "* multiplier(job.labels)",
+      "replace": "",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "Windows minutes are counted once, not twice.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "text.includes('windows') ? 2 : 1",
+      "replace": "text.includes('windows') ? 1 : 1",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "Reruns are missed, because only the latest attempt of each run is read.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "jobs?filter=all&per_page=100",
+      "replace": "jobs?per_page=100",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "The whole month is one search, so a busy month hits the 1000-result cap.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "for (const day of dayRange(monthStart, lastDay)) {",
+      "replace": "for (const day of [monthStart]) {",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "A private repository is reported as public.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "d.private === false",
+      "replace": "d.private === true",
       "test": "node --test test/ci-minutes.test.mjs"
     }
   ]

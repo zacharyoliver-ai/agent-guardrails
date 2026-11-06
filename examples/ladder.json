@@ -6,5 +6,6 @@
   },
   "expensiveJobs": ["review", "security", "migration", "legal", "architecture", "audit"],
   "lookupWords": ["find", "locate", "list", "count", "look up", "lookup", "where is", "search for"],
+  "readOnlyAgents": ["scout", "explore"],
   "buildWords": ["build", "implement", "fix", "write", "refactor", "add", "create"]
 }
