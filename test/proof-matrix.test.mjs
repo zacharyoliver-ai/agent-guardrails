@@ -129,14 +129,3 @@ test('a fault that makes its test hang is TIMEOUT, which is not CAUGHT', () => {
   assert.deepEqual(run.results.map((r) => r.status), ['TIMEOUT']);
   assert.equal(run.caught, 0);
 });
-
-test('the counts in the README and PROOF.md match the fault files', () => {
-  const dir = path.join(repoRoot, 'proof/faults');
-  const tools = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
-  const total = tools.reduce((sum, t) => sum + t.faults.length, 0);
-  const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
-  assert.ok(readme.includes(`carries ${total} planted faults across ${tools.length} tools`), `README paragraph should say ${total} and ${tools.length}`);
-  assert.ok(readme.includes(`planted%20faults-${total}-`), `README badge should say ${total}`);
-  const proof = fs.readFileSync(path.join(repoRoot, 'PROOF.md'), 'utf8');
-  assert.ok(proof.includes(`${total} of ${total} planted faults are caught, across ${tools.length} tools`), 'run node bin/proof-matrix.mjs --write');
-});

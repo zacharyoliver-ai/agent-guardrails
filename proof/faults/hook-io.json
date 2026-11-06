@@ -1,8 +1,22 @@
 {
   "name": "hook-io",
   "kind": "guard",
-  "what": "A hook's state file is replaced whole, and a moment's lock on Windows does not lose the write.",
+  "what": "A hook reached through a symlinked folder still runs, a hook's state file is replaced whole, and a moment's lock on Windows does not lose the write.",
   "faults": [
+    {
+      "fault": "Paths are compared as typed, so a hook reached through a symlinked folder never runs and allows everything.",
+      "file": "lib/hook-io.mjs",
+      "find": "return fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(metaUrl));",
+      "replace": "return process.argv[1] === fileURLToPath(metaUrl);",
+      "test": "node --test test/hook-io.test.mjs"
+    },
+    {
+      "fault": "Every module counts as the script being run, so importing a hook runs it.",
+      "file": "lib/hook-io.mjs",
+      "find": "return fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(metaUrl));",
+      "replace": "return true;",
+      "test": "node --test test/hook-io.test.mjs"
+    },
     {
       "fault": "A refused rename is not tried again, so a moment's lock on Windows loses the write.",
       "file": "lib/hook-io.mjs",

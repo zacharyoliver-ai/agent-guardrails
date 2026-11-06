@@ -4,7 +4,7 @@ A planted fault is a bug we put in a tool on purpose, in one exact place. We do 
 
 Re-run it yourself: `node bin/proof-matrix.mjs --check`. CI runs it on Windows, macOS and Linux on every push.
 
-190 of 190 planted faults are caught, across 28 tools.
+192 of 192 planted faults are caught, across 28 tools.
 
 ## Guards
 
@@ -80,7 +80,9 @@ Re-run it yourself: `node bin/proof-matrix.mjs --check`. CI runs it on Windows, 
 |  |  | The value of git stash -m is read as a path, so git stash push -m note passes as if it named a file. | CAUGHT |
 |  |  | A cd earlier in the command is ignored, so a bare push from a feature branch is judged by the session's folder. | CAUGHT |
 |  |  | An input redirection reads as a named path, so git add -A </dev/null passes. | CAUGHT |
-| `hook-io` | A hook's state file is replaced whole, and a moment's lock on Windows does not lose the write. | A refused rename is not tried again, so a moment's lock on Windows loses the write. | CAUGHT |
+| `hook-io` | A hook reached through a symlinked folder still runs, a hook's state file is replaced whole, and a moment's lock on Windows does not lose the write. | Paths are compared as typed, so a hook reached through a symlinked folder never runs and allows everything. | CAUGHT |
+|  |  | Every module counts as the script being run, so importing a hook runs it. | CAUGHT |
+|  |  | A refused rename is not tried again, so a moment's lock on Windows loses the write. | CAUGHT |
 |  |  | EPERM, the error Windows gives for a held file, is not treated as a moment's lock. | CAUGHT |
 |  |  | Every error is tried again, so a full disk holds the hook up. | CAUGHT |
 |  |  | A write that gives up leaves its temporary file behind. | CAUGHT |
