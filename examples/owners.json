@@ -1,0 +1,6 @@
+{
+  "lanes": {
+    "api": ["src/api/**", "test/api/**"],
+    "web": ["src/web/**"]
+  }
+}

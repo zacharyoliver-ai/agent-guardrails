@@ -1,0 +1,10 @@
+{
+  "name": "agent-guardrails",
+  "version": "0.1.0",
+  "description": "Claude Code hooks and a CLI that keep parallel AI coding agents inside their limits.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "bin": { "planted-fault": "bin/planted-fault.mjs" },
+  "scripts": { "test": "node --test" }
+}
