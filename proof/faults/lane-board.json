@@ -1,0 +1,35 @@
+{
+  "name": "lane-board",
+  "kind": "coordination",
+  "what": "Lists the files each git worktree is changing and names every file that two or more lanes touch.",
+  "faults": [
+    {
+      "fault": "A squash-merged lane keeps counting as editing its files, so finished work reads as an overlap.",
+      "file": "bin/lane-board.mjs",
+      "find": ".filter((f) => differsFromBase.has(f))",
+      "replace": "",
+      "test": "node --test test/lane-board.test.mjs"
+    },
+    {
+      "fault": "Untracked files are left out, so a new file edited in two lanes goes unseen.",
+      "file": "bin/lane-board.mjs",
+      "find": "add(git(wt.path, ['ls-files', '--others', '--exclude-standard']));",
+      "replace": "",
+      "test": "node --test test/lane-board.test.mjs"
+    },
+    {
+      "fault": "A file needs three lanes before it counts as an overlap.",
+      "file": "bin/lane-board.mjs",
+      "find": ".filter(([, who]) => who.length > 1)",
+      "replace": ".filter(([, who]) => who.length > 2)",
+      "test": "node --test test/lane-board.test.mjs"
+    },
+    {
+      "fault": "Every changed file is reported as an overlap, even in one lane.",
+      "file": "bin/lane-board.mjs",
+      "find": ".filter(([, who]) => who.length > 1)",
+      "replace": ".filter(([, who]) => who.length > 0)",
+      "test": "node --test test/lane-board.test.mjs"
+    }
+  ]
+}

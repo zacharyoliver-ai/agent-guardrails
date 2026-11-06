@@ -1,0 +1,35 @@
+{
+  "name": "contract-check",
+  "kind": "proof-tool",
+  "what": "A contract line is reported PROVEN only when its test passes clean and fails once its planted fault is in place, and the exit code is 0 only when every line is PROVEN.",
+  "faults": [
+    {
+      "fault": "A line whose test still passes with the fault in place is reported as PROVEN.",
+      "file": "bin/contract-check.mjs",
+      "find": "if (code === 1) return 'MISSED';",
+      "replace": "if (code === 1) return 'PROVEN';",
+      "test": "node --test test/contract-check.test.mjs"
+    },
+    {
+      "fault": "A line that was proven is reported as UNPROVEN.",
+      "file": "bin/contract-check.mjs",
+      "find": "if (code === 0) return 'PROVEN';",
+      "replace": "if (code === 0) return 'UNPROVEN';",
+      "test": "node --test test/contract-check.test.mjs"
+    },
+    {
+      "fault": "The exit code ignores MISSED lines and fails only on UNPROVEN ones.",
+      "file": "bin/contract-check.mjs",
+      "find": "r.status === 'PROVEN') ? 0 : 1",
+      "replace": "r.status !== 'UNPROVEN') ? 0 : 1",
+      "test": "node --test test/contract-check.test.mjs"
+    },
+    {
+      "fault": "The --changed filter is ignored, so every contract is proved again.",
+      "file": "bin/contract-check.mjs",
+      "find": "if (touched && !lines.some(",
+      "replace": "if (false && !lines.some(",
+      "test": "node --test test/contract-check.test.mjs"
+    }
+  ]
+}

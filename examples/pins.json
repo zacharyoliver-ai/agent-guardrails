@@ -1,0 +1,17 @@
+[
+  {
+    "file": "docs/terms.md",
+    "must": "You are responsible for the messages sent from your account.",
+    "why": "Legal wording. Changing it needs a lawyer's sign-off, not an agent's edit."
+  },
+  {
+    "file": "docs/privacy.md",
+    "must": "We never sell your data.",
+    "why": "A promise made to users. Rewording it changes what was promised."
+  },
+  {
+    "glob": "src/**",
+    "mustNot": "TODO(legal)",
+    "why": "A legal placeholder must not ship inside source files."
+  }
+]

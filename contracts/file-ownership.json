@@ -1,0 +1,28 @@
+{
+  "feature": "file-ownership",
+  "purpose": "Keep each parallel agent editing only the files its lane owns.",
+  "always": [
+    {
+      "rule": "An edit to a path the lane does not own is refused, naming the path and the lane's files.",
+      "test": "node --test test/file-ownership.test.mjs",
+      "fault": { "file": "hooks/file-ownership.mjs", "find": "if (globs.some((g) => matchGlob(g, rel))) return null;", "replace": "if (true) return null;" }
+    },
+    {
+      "rule": "A lane missing from owners.json owns nothing.",
+      "test": "node --test test/file-ownership.test.mjs",
+      "fault": { "file": "hooks/file-ownership.mjs", "find": "if (!Array.isArray(globs)) return", "replace": "if (false) return" }
+    },
+    {
+      "rule": "A path that climbs out of the project folder is refused.",
+      "test": "node --test test/file-ownership.test.mjs",
+      "fault": { "file": "hooks/file-ownership.mjs", "find": "return a.startsWith(`${b}/`) ? abs.slice(base.length + 1) : null;", "replace": "return abs.slice(base.length + 1);" }
+    }
+  ],
+  "never": [
+    {
+      "rule": "A session with no lane set is never restricted.",
+      "test": "node --test test/file-ownership.test.mjs",
+      "fault": { "file": "hooks/file-ownership.mjs", "find": "if (!lane) return null;", "replace": "if (!lane) return 'no lane';" }
+    }
+  ]
+}

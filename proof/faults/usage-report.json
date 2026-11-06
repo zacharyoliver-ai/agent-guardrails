@@ -1,0 +1,35 @@
+{
+  "name": "usage-report",
+  "kind": "cost-tool",
+  "what": "Reports token use per transcript, counts each API response once, and flags sessions that pass the request or context limit.",
+  "faults": [
+    {
+      "fault": "Placeholder lines count as requests, so idle sessions look busier than they were.",
+      "file": "bin/usage-report.mjs",
+      "find": "if (msg.model === '<synthetic>') continue;",
+      "replace": "",
+      "test": "node --test test/usage-report.test.mjs"
+    },
+    {
+      "fault": "Only the request count is checked, so a session with a huge context is never flagged.",
+      "file": "bin/usage-report.mjs",
+      "find": "row.requests > maxRequests || row.peak > maxContext",
+      "replace": "row.requests > maxRequests",
+      "test": "node --test test/usage-report.test.mjs"
+    },
+    {
+      "fault": "Repeated lines of one response are counted as separate requests.",
+      "file": "bin/usage-report.mjs",
+      "find": "const id = msg.id || obj.requestId;",
+      "replace": "const id = `${msg.id}-${obj.timestamp}-${responses.size}`;",
+      "test": "node --test test/usage-report.test.mjs"
+    },
+    {
+      "fault": "Old files are no longer skipped by modification time.",
+      "file": "bin/usage-report.mjs",
+      "find": "if (fs.statSync(file).mtimeMs < sinceMs) continue;",
+      "replace": "if (false) continue;",
+      "test": "node --test test/usage-report.test.mjs"
+    }
+  ]
+}

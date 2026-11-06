@@ -1,0 +1,35 @@
+{
+  "name": "ci-minutes",
+  "kind": "cost-tool",
+  "what": "Totals Actions minutes for the month and reports OVER when the pace would pass the cap minus the reserve.",
+  "faults": [
+    {
+      "fault": "Job time rounds down, so the total is always short.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "total += Math.ceil((end - start) / 60000);",
+      "replace": "total += Math.floor((end - start) / 60000);",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "The reserve is ignored when judging OVER.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "if (projected > cap - reserve) status = 'OVER';",
+      "replace": "if (projected > cap) status = 'OVER';",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "The WATCH line moves up to 95 percent of the cap.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "projected > cap * 0.8",
+      "replace": "projected > cap * 0.95",
+      "test": "node --test test/ci-minutes.test.mjs"
+    },
+    {
+      "fault": "Runs still in progress are cached, so their later minutes are never counted.",
+      "file": "bin/ci-minutes.mjs",
+      "find": "if (run.status === 'completed' && cacheFile) cache[run.id] = minutes;",
+      "replace": "if (cacheFile) cache[run.id] = minutes;",
+      "test": "node --test test/ci-minutes.test.mjs"
+    }
+  ]
+}

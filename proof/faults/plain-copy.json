@@ -1,0 +1,35 @@
+{
+  "name": "plain-copy",
+  "kind": "proof-tool",
+  "what": "Phrases that read as machine-written are reported with file, line and a plain alternative, while code, noun uses and allowed words are left alone.",
+  "faults": [
+    {
+      "fault": "Every match is skipped as if its word were on the allow list.",
+      "file": "bin/plain-copy.mjs",
+      "find": "if (allowed.some((w) => m[0].toLowerCase().includes(w))) continue;",
+      "replace": "if (true) continue;",
+      "test": "node --test test/plain-copy.test.mjs"
+    },
+    {
+      "fault": "The noun use of leverage is reported along with the verb.",
+      "file": "bin/plain-copy.mjs",
+      "find": "if (rule.verb && !rule.verb(line, m.index, m[0].length)) continue;",
+      "replace": "if (false) continue;",
+      "test": "node --test test/plain-copy.test.mjs"
+    },
+    {
+      "fault": "Fenced code is scanned because the fence is closed as soon as it opens.",
+      "file": "bin/plain-copy.mjs",
+      "find": "fence = f[1];",
+      "replace": "fence = null;",
+      "test": "node --test test/plain-copy.test.mjs"
+    },
+    {
+      "fault": "Inline code spans are scanned like prose.",
+      "file": "bin/plain-copy.mjs",
+      "find": "const line = markdown ? raw.replace(/`[^`]*`/g, (s) => ' '.repeat(s.length)) : raw;",
+      "replace": "const line = raw;",
+      "test": "node --test test/plain-copy.test.mjs"
+    }
+  ]
+}

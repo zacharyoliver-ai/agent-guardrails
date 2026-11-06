@@ -1,0 +1,33 @@
+{
+  "feature": "step-budget",
+  "purpose": "Stop an agent from running tool calls without end by warning it once, then refusing everything except reading.",
+  "always": [
+    {
+      "rule": "The first call past the warn line is refused with a hand-off request.",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "state.count > warn && !state.warned", "replace": "state.count > warn + 1 && !state.warned" }
+    },
+    {
+      "rule": "Past the hard limit, editing and shell calls are refused.",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "if (!READ_ONLY.has(input.tool_name)) {", "replace": "if (false) {" }
+    },
+    {
+      "rule": "A call with no agent id is counted against its session.",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "input.agent_id || input.session_id || 'unknown'", "replace": "input.agent_id || 'unknown'" }
+    }
+  ],
+  "never": [
+    {
+      "rule": "Read, Grep and Glob are never refused, so an agent can always look before it writes its hand-off.",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "new Set(['Read', 'Grep', 'Glob'])", "replace": "new Set(['Grep', 'Glob'])" }
+    },
+    {
+      "rule": "The warning is never repeated on later calls.",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "state.warned = true;", "replace": "state.warned = false;" }
+    }
+  ]
+}

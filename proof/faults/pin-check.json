@@ -1,0 +1,28 @@
+{
+  "name": "pin-check",
+  "kind": "proof-tool",
+  "what": "Pinned wording must appear byte for byte (line endings aside) in its file, forbidden text must appear nowhere, and a missing pinned file is a finding.",
+  "faults": [
+    {
+      "fault": "Reworded text passes because the presence check never reports.",
+      "file": "bin/pin-check.mjs",
+      "find": "if (!text.includes(lf(pin.must))) findings.push(",
+      "replace": "if (false) findings.push(",
+      "test": "node --test test/pin-check.test.mjs"
+    },
+    {
+      "fault": "Line endings are no longer converted, so a file saved with CRLF fails every multi-line pin.",
+      "file": "bin/pin-check.mjs",
+      "find": "const text = lf(fs.readFileSync(full, 'utf8'));",
+      "replace": "const text = fs.readFileSync(full, 'utf8');",
+      "test": "node --test test/pin-check.test.mjs"
+    },
+    {
+      "fault": "A missing pinned file is not reported.",
+      "file": "bin/pin-check.mjs",
+      "find": "if (!fs.existsSync(full)) {",
+      "replace": "if (false) {",
+      "test": "node --test test/pin-check.test.mjs"
+    }
+  ]
+}

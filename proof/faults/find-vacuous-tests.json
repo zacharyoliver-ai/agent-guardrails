@@ -1,0 +1,35 @@
+{
+  "name": "find-vacuous-tests",
+  "kind": "proof-tool",
+  "what": "Every test that has no assertion, a check that always passes, a leftover .only or a skip with no reason is reported with its file and line, and a test that can fail is not.",
+  "faults": [
+    {
+      "fault": "A test body with no assertion is never reported.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "if (!ASSERTION.test(args)) add(",
+      "replace": "if (false) add(",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    },
+    {
+      "fault": "A test with no inline callback is inspected as if it had an empty body.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "if (!/=>|\\bfunction\\b/.test(args)) continue;",
+      "replace": "if (false) continue;",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    },
+    {
+      "fault": "A skipped test is never reported, even with no reason given.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "if (!stringArg && !commentLines.has(line) && !commentLines.has(line - 1)) {",
+      "replace": "if (false) {",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    },
+    {
+      "fault": "Two different literals are reported as the same literal on both sides.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "args[0] === args[1]",
+      "replace": "args[0] !== args[1]",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    }
+  ]
+}
