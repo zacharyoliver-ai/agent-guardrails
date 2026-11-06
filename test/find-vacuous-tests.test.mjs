@@ -31,6 +31,16 @@ test('--assert-name teaches the scanner a custom assertion helper', () => {
   assert.deepEqual(findVacuous(src, { assertNames: ['checkEqual'] }), []);
 });
 
+test('a helper in the same file whose body asserts counts as an assertion', () => {
+  const fn = "function same(a, b) { assert.equal(a, b); }\ntest('a', () => { same(f(), 2); });";
+  const arrow = "const same = (a, b) => assert.equal(a, b);\ntest('a', () => { same(f(), 2); });";
+  const chain = "const inner = (a) => { assert.ok(a); };\nfunction outer(a) { inner(a); }\ntest('a', () => { outer(f()); });";
+  for (const src of [fn, arrow, chain]) assert.deepEqual(findVacuous(src), [], src);
+  // a helper with no assertion does not rescue the test, and neither does a name that merely starts like one
+  assert.equal(findVacuous("function load() { return 1; }\ntest('a', () => { load(); });").length, 1);
+  assert.equal(findVacuous("function same() { assert.ok(1); }\ntest('a', () => { sameness(); });").length, 1);
+});
+
 test('the word assert inside a string or comment does not count as an assertion', () => {
   assert.equal(findVacuous("test('a', () => { const s = 'assert.ok(x)'; });").length, 1);
   assert.equal(findVacuous("test('a', () => { // assert.ok(x)\n});").length, 1);

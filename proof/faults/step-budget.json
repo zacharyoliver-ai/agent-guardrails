@@ -1,0 +1,42 @@
+{
+  "name": "step-budget",
+  "kind": "guard",
+  "what": "An agent is warned once when it nears its tool-call limit, then refused everything except reading, and each agent is counted on its own.",
+  "faults": [
+    {
+      "fault": "The warning is skipped, so an agent reaches the hard limit without being told.",
+      "file": "hooks/step-budget.mjs",
+      "find": "state.count > warn && !state.warned",
+      "replace": "state.count > warn + 1 && !state.warned",
+      "test": "node --test test/step-budget.test.mjs"
+    },
+    {
+      "fault": "Past the hard limit, editing and shell calls are no longer refused.",
+      "file": "hooks/step-budget.mjs",
+      "find": "if (!READ_ONLY.has(input.tool_name)) {",
+      "replace": "if (false) {",
+      "test": "node --test test/step-budget.test.mjs"
+    },
+    {
+      "fault": "Two agents in one session share a counter.",
+      "file": "hooks/step-budget.mjs",
+      "find": "String(input.agent_id || input.session_id || 'unknown')",
+      "replace": "String(input.session_id || input.agent_id || 'unknown')",
+      "test": "node --test test/step-budget.test.mjs"
+    },
+    {
+      "fault": "Reading is refused past the limit, so the agent cannot look up what it needs for its hand-off.",
+      "file": "hooks/step-budget.mjs",
+      "find": "new Set(['Read', 'Grep', 'Glob'])",
+      "replace": "new Set(['Grep', 'Glob'])",
+      "test": "node --test test/step-budget.test.mjs"
+    },
+    {
+      "fault": "The warning repeats on every call after the first.",
+      "file": "hooks/step-budget.mjs",
+      "find": "state.warned = true;",
+      "replace": "state.warned = false;",
+      "test": "node --test test/step-budget.test.mjs"
+    }
+  ]
+}

@@ -13,6 +13,11 @@
       "fault": { "file": "hooks/step-budget.mjs", "find": "if (!READ_ONLY.has(input.tool_name)) {", "replace": "if (false) {" }
     },
     {
+      "rule": "each agent is counted on its own",
+      "test": "node --test test/step-budget.test.mjs",
+      "fault": { "file": "hooks/step-budget.mjs", "find": "String(input.agent_id || input.session_id || 'unknown')", "replace": "String(input.session_id || input.agent_id || 'unknown')" }
+    },
+    {
       "rule": "A call with no agent id is counted against its session.",
       "test": "node --test test/step-budget.test.mjs",
       "fault": { "file": "hooks/step-budget.mjs", "find": "input.agent_id || input.session_id || 'unknown'", "replace": "input.agent_id || 'unknown'" }

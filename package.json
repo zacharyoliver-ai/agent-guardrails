@@ -1,10 +1,27 @@
 {
   "name": "agent-guardrails",
-  "version": "0.1.0",
-  "description": "Claude Code hooks and a CLI that keep parallel AI coding agents inside their limits.",
+  "version": "0.2.0",
+  "description": "Hooks and tools for running many AI coding agents at once, with a planted bug behind every guard to show it works.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=18" },
-  "bin": { "planted-fault": "bin/planted-fault.mjs" },
-  "scripts": { "test": "node --test" }
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "ci-minutes": "bin/ci-minutes.mjs",
+    "contract-check": "bin/contract-check.mjs",
+    "find-vacuous-tests": "bin/find-vacuous-tests.mjs",
+    "lane-board": "bin/lane-board.mjs",
+    "pin-check": "bin/pin-check.mjs",
+    "plain-copy": "bin/plain-copy.mjs",
+    "planted-fault": "bin/planted-fault.mjs",
+    "proof-matrix": "bin/proof-matrix.mjs",
+    "setup": "bin/setup.mjs",
+    "usage-report": "bin/usage-report.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "proof": "node bin/proof-matrix.mjs --check",
+    "demo": "node demo/run.mjs"
+  }
 }

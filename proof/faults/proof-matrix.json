@@ -1,0 +1,35 @@
+{
+  "name": "proof-matrix",
+  "kind": "proof-tool",
+  "what": "Every planted fault of every tool is run in a throwaway copy of the repo, and any fault whose test still passes is reported as MISSED.",
+  "faults": [
+    {
+      "fault": "A fault whose test still passes is reported as CAUGHT.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "(code === 0 ? 'CAUGHT' : code === 1 ? 'MISSED' : 'ERROR')",
+      "replace": "(code === 0 || code === 1 ? 'CAUGHT' : 'ERROR')",
+      "test": "node --test test/proof-matrix.test.mjs"
+    },
+    {
+      "fault": "The first fault of every tool is dropped from the run.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "for (const f of tool.faults) {",
+      "replace": "for (const f of tool.faults.slice(1)) {",
+      "test": "node --test test/proof-matrix.test.mjs"
+    },
+    {
+      "fault": "The planted bug is written into the working tree instead of the temp copy.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "const file = path.join(copy, f.file || '');",
+      "replace": "const file = path.join(root, f.file || '');",
+      "test": "node --test test/proof-matrix.test.mjs"
+    },
+    {
+      "fault": "The temp copy is left behind.",
+      "file": "bin/proof-matrix.mjs",
+      "find": "fs.rmSync(copy, { recursive: true, force: true });",
+      "replace": "",
+      "test": "node --test test/proof-matrix.test.mjs"
+    }
+  ]
+}

@@ -4,19 +4,136 @@
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/hooks/step-budget.mjs\"" }
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/step-budget.mjs\""
+          }
         ]
       },
       {
         "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/hooks/file-ownership.mjs\"" }
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/file-ownership.mjs\""
+          }
         ]
       },
       {
         "matcher": "Edit|Write|Bash",
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/hooks/design-seat.mjs\"" }
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/design-seat.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/git-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/secret-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/bulk-write-gate.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/foreground-wait.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/model-ladder.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/fleet-cap.mjs\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/fleet-cap.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/never-say.mjs\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/proof-required.mjs\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/decision-ledger.mjs\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/decision-ledger.mjs\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/decisions-file.mjs\""
+          }
         ]
       }
     ]

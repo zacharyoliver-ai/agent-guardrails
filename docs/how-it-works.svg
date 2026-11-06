@@ -1,23 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" viewBox="0 0 880 410" role="img" aria-labelledby="t d">
   <title id="t">How agent-guardrails works</title>
-  <desc id="d">A tool call passes three hooks: step budget, file ownership and design seat. It is either allowed and the tool runs, or denied and the agent gets the reason back.</desc>
+  <desc id="d">An agent's tool call passes through Guards and is either allowed or denied with a reason. The agent's reply passes through Stop hooks. A Proof layer sits under both, made of planted faults and contracts. Cost tools and Coordination tools sit beside them.</desc>
   <style>
     svg { background: transparent; }
     text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; fill: #1f2328; }
     .sub { font-size: 12px; fill: #57606a; }
     .box { fill: none; stroke: #57606a; stroke-width: 1.5; }
+    .frame { fill: none; stroke: #57606a; stroke-width: 1; stroke-dasharray: 3 4; }
     .accent { fill: none; stroke: #2f6fed; stroke-width: 2; }
     .accent-text { fill: #2f6fed; font-weight: 600; }
     .line { fill: none; stroke: #57606a; stroke-width: 1.5; }
-    .back { fill: none; stroke: #2f6fed; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .up { fill: none; stroke: #2f6fed; stroke-width: 1.5; stroke-dasharray: 5 4; }
     .head { fill: #57606a; }
     .head-accent { fill: #2f6fed; }
     @media (prefers-color-scheme: dark) {
       text { fill: #e6edf3; }
       .sub { fill: #9da7b3; }
-      .box, .line { stroke: #9da7b3; }
+      .box, .line, .frame { stroke: #9da7b3; }
       .head { fill: #9da7b3; }
-      .accent, .back { stroke: #6ea0ff; }
+      .accent, .up { stroke: #6ea0ff; }
       .accent-text { fill: #6ea0ff; }
       .head-accent { fill: #6ea0ff; }
     }
@@ -27,37 +28,43 @@
     <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="head-accent"/></marker>
   </defs>
 
-  <rect class="box" x="20" y="140" width="170" height="80" rx="14"/>
-  <text x="105" y="176" text-anchor="middle">Agent</text>
-  <text x="105" y="198" text-anchor="middle" class="sub">tool call</text>
+  <rect class="box" x="20" y="100" width="130" height="80" rx="14"/>
+  <text x="85" y="136" text-anchor="middle">Agent</text>
+  <text x="85" y="157" text-anchor="middle" class="sub">calls, replies</text>
 
-  <path class="line" d="M190 180H260M260 72V288"/>
-  <path class="line" d="M260 72H328" marker-end="url(#a)"/>
-  <path class="line" d="M260 180H328" marker-end="url(#a)"/>
-  <path class="line" d="M260 288H328" marker-end="url(#a)"/>
+  <path class="line" d="M150 140H172M172 82V212"/>
+  <path class="line" d="M172 82H208" marker-end="url(#a)"/>
+  <path class="line" d="M172 212H208" marker-end="url(#a)"/>
+  <text x="166" y="78" class="sub" text-anchor="end">call</text>
+  <text x="166" y="226" class="sub" text-anchor="end">reply</text>
 
-  <rect class="box" x="330" y="40" width="220" height="64" rx="12"/>
-  <text x="440" y="68" text-anchor="middle">Step budget</text>
-  <text x="440" y="88" text-anchor="middle" class="sub">counts calls, warns, stops</text>
-  <rect class="box" x="330" y="148" width="220" height="64" rx="12"/>
-  <text x="440" y="176" text-anchor="middle">File ownership</text>
-  <text x="440" y="196" text-anchor="middle" class="sub">edits stay in the lane</text>
-  <rect class="box" x="330" y="256" width="220" height="64" rx="12"/>
-  <text x="440" y="284" text-anchor="middle">Design seat</text>
-  <text x="440" y="304" text-anchor="middle" class="sub">screens only, no pushes</text>
+  <rect class="frame" x="196" y="22" width="322" height="244" rx="16"/>
+  <text x="208" y="42" class="sub">hooks</text>
 
-  <path class="line" d="M550 72H620M550 180H620M550 288H620M620 72V288"/>
-  <path class="line" d="M620 105H686" marker-end="url(#a)"/>
-  <path class="accent" d="M620 255H686" marker-end="url(#b)"/>
+  <rect class="box" x="210" y="52" width="296" height="62" rx="12"/>
+  <text x="358" y="78" text-anchor="middle">Guards</text>
+  <text x="358" y="98" text-anchor="middle" class="sub">check each tool call before it runs</text>
+  <rect class="box" x="210" y="182" width="296" height="62" rx="12"/>
+  <text x="358" y="208" text-anchor="middle">Stop hooks</text>
+  <text x="358" y="228" text-anchor="middle" class="sub">check the reply before it ends</text>
 
-  <rect class="box" x="690" y="70" width="170" height="70" rx="14"/>
-  <text x="775" y="100" text-anchor="middle">Allowed</text>
-  <text x="775" y="121" text-anchor="middle" class="sub">the tool runs</text>
-  <rect class="accent" x="690" y="220" width="170" height="90" rx="14"/>
-  <text x="775" y="254" text-anchor="middle" class="accent-text">Denied</text>
-  <text x="775" y="276" text-anchor="middle" class="sub">reason goes back</text>
-  <text x="775" y="294" text-anchor="middle" class="sub">to the agent</text>
+  <path class="line" d="M506 67H560" marker-end="url(#a)"/>
+  <path class="accent" d="M506 98H532V117H560" marker-end="url(#b)"/>
+  <rect class="box" x="562" y="46" width="298" height="42" rx="12"/>
+  <text x="711" y="72" text-anchor="middle">Allowed: the tool runs</text>
+  <rect class="accent" x="562" y="96" width="298" height="42" rx="12"/>
+  <text x="711" y="122" text-anchor="middle" class="accent-text">Denied: the reason goes back</text>
 
-  <path class="back" d="M775 310V342H105V222" marker-end="url(#b)"/>
-  <text x="440" y="334" text-anchor="middle" class="sub">the agent reads the reason and changes course</text>
+  <rect class="box" x="562" y="172" width="142" height="72" rx="12"/>
+  <text x="633" y="203" text-anchor="middle">Cost tools</text>
+  <text x="633" y="224" text-anchor="middle" class="sub">tokens, CI minutes</text>
+  <rect class="box" x="718" y="172" width="142" height="72" rx="12"/>
+  <text x="789" y="203" text-anchor="middle">Coordination</text>
+  <text x="789" y="224" text-anchor="middle" class="sub">lanes, rulings, questions</text>
+
+  <path class="up" d="M358 304V272" marker-end="url(#b)"/>
+  <text x="372" y="293" class="sub">a planted bug behind each one</text>
+  <rect class="accent" x="20" y="306" width="840" height="84" rx="16"/>
+  <text x="440" y="340" text-anchor="middle" class="accent-text">Proof</text>
+  <text x="440" y="364" text-anchor="middle" class="sub">planted faults and contracts. Every test has to fail on a broken copy.</text>
 </svg>

@@ -1,0 +1,42 @@
+{
+  "name": "design-seat",
+  "kind": "guard",
+  "what": "The design seat edits screen files only and never pushes, opens pull requests or runs tests.",
+  "faults": [
+    {
+      "fault": "Edits to backend folders are allowed.",
+      "file": "hooks/design-seat.mjs",
+      "find": "if (OFF_LIMITS_DIR.test(p) || TEST_FILE.test(p.split('/').pop())) {",
+      "replace": "if (TEST_FILE.test(p.split('/').pop())) {",
+      "test": "node --test test/design-seat.test.mjs"
+    },
+    {
+      "fault": "Test files are allowed.",
+      "file": "hooks/design-seat.mjs",
+      "find": "if (OFF_LIMITS_DIR.test(p) || TEST_FILE.test(p.split('/').pop())) {",
+      "replace": "if (OFF_LIMITS_DIR.test(p)) {",
+      "test": "node --test test/design-seat.test.mjs"
+    },
+    {
+      "fault": "git push is no longer in the blocked commands.",
+      "file": "hooks/design-seat.mjs",
+      "find": "/\\bgit\\s+push\\b|",
+      "replace": "/",
+      "test": "node --test test/design-seat.test.mjs"
+    },
+    {
+      "fault": "The seat is enforced for every session, even without the seat variable.",
+      "file": "hooks/design-seat.mjs",
+      "find": "if (env.GUARDRAILS_SEAT !== 'design') return null;",
+      "replace": "if (false) return null;",
+      "test": "node --test test/design-seat.test.mjs"
+    },
+    {
+      "fault": "Any folder whose name merely ends in a backend name is refused, so a screen file is blocked.",
+      "file": "hooks/design-seat.mjs",
+      "find": "/(^|\\/)(api|",
+      "replace": "/(api|",
+      "test": "node --test test/design-seat.test.mjs"
+    }
+  ]
+}

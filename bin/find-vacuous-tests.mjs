@@ -166,6 +166,34 @@ export function findVacuous(src, { assertNames = [] } = {}) {
   const names = ['assert', 'expect', 'should', ...assertNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))];
   const ASSERTION = new RegExp(`\\b(?:${names.join('|')})`);
 
+  // A helper defined in this file whose body asserts counts as an assertion when a test calls it.
+  // Repeats until no new helper turns up, so a helper that calls another helper works too.
+  const candidates = [];
+  for (const m of masked.matchAll(/\bfunction\s*\*?\s*(\w+)\s*\(/g)) {
+    const close = matchClose(masked, m.index + m[0].length - 1);
+    const brace = close < 0 ? -1 : masked.indexOf('{', close);
+    const end = brace < 0 ? -1 : matchClose(masked, brace);
+    if (end > 0) candidates.push([m[1], masked.slice(brace, end + 1)]);
+  }
+  for (const m of masked.matchAll(/\b(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>\s*/g)) {
+    const at = m.index + m[0].length;
+    const end = masked[at] === '{' ? matchClose(masked, at) + 1 : masked.indexOf('\n', at);
+    candidates.push([m[1], masked.slice(at, end > at ? end : masked.length)]);
+  }
+  const helpers = new Set();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    const calls = new RegExp(`\\b(?:${[...helpers].join('|') || '(?!)'})\\s*\\(`);
+    for (const [name, body] of candidates) {
+      if (!helpers.has(name) && (ASSERTION.test(body) || calls.test(body))) {
+        helpers.add(name);
+        grew = true;
+      }
+    }
+  }
+  const HELPER_CALL = new RegExp(`\\b(?:${[...helpers].join('|') || '(?!)'})\\s*\\(`);
+
   for (const m of masked.matchAll(TEST_CALL)) {
     const before = masked.slice(Math.max(0, m.index - 12), m.index);
     if (/function\s*\*?\s*$/.test(before) || before.endsWith('.')) continue;
@@ -186,7 +214,7 @@ export function findVacuous(src, { assertNames = [] } = {}) {
     }
     if (mod === 'skip' || mod === 'todo') continue;
     if (!/=>|\bfunction\b/.test(args)) continue; // no inline callback to look inside
-    if (!ASSERTION.test(args)) add(m.index, 'test body has no assertion, so it cannot fail');
+    if (!ASSERTION.test(args) && !HELPER_CALL.test(args)) add(m.index, 'test body has no assertion, so it cannot fail');
   }
 
   for (const m of masked.matchAll(ONLY_OPTION)) add(m.index, 'leftover only: true runs just this test and hides the rest of the file');

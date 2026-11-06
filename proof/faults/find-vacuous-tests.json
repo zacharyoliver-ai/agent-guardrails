@@ -6,7 +6,7 @@
     {
       "fault": "A test body with no assertion is never reported.",
       "file": "bin/find-vacuous-tests.mjs",
-      "find": "if (!ASSERTION.test(args)) add(",
+      "find": "if (!ASSERTION.test(args) && !HELPER_CALL.test(args)) add(",
       "replace": "if (false) add(",
       "test": "node --test test/find-vacuous-tests.test.mjs"
     },
@@ -29,6 +29,20 @@
       "file": "bin/find-vacuous-tests.mjs",
       "find": "args[0] === args[1]",
       "replace": "args[0] !== args[1]",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    },
+    {
+      "fault": "A test that calls a shared check helper is reported as having no assertion.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "const HELPER_CALL = new RegExp(`\\\\b(?:${[...helpers].join('|') || '(?!)'})\\\\s*\\\\(`);",
+      "replace": "const HELPER_CALL = /(?!)/;",
+      "test": "node --test test/find-vacuous-tests.test.mjs"
+    },
+    {
+      "fault": "Any helper function counts as asserting, even one whose body checks nothing.",
+      "file": "bin/find-vacuous-tests.mjs",
+      "find": "if (!helpers.has(name) && (ASSERTION.test(body) || calls.test(body))) {",
+      "replace": "if (!helpers.has(name)) {",
       "test": "node --test test/find-vacuous-tests.test.mjs"
     }
   ]

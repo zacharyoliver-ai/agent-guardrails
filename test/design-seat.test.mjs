@@ -15,7 +15,7 @@ test('inactive without the seat variable', () => {
 });
 
 test('screen files pass', () => {
-  for (const f of ['src/ui/Button.css', 'src/screens/Home.jsx', 'docs/readme.md', 'src/latest.js']) {
+  for (const f of ['src/ui/Button.css', 'src/screens/Home.jsx', 'docs/readme.md', 'src/latest.js', 'src/rapi/Card.css', 'src/contest/Banner.jsx']) {
     assert.equal(checkSeat(edit(f), seat), null, f);
   }
 });

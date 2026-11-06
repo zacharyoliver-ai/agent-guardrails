@@ -1,0 +1,28 @@
+{
+  "name": "demo",
+  "kind": "coordination",
+  "what": "The demo exits 1 whenever a scene's result differs from what it expects, and removes its temp folder.",
+  "faults": [
+    {
+      "fault": "The git-guard deny scene tries an allowed command while still expecting a denial, so its expected result is wrong.",
+      "file": "demo/run.mjs",
+      "find": "input: () => bash('git add -A') },",
+      "replace": "input: () => bash('git add src/app.js') },",
+      "test": "node --test test/demo.test.mjs"
+    },
+    {
+      "fault": "Every scene counts as matching, whatever the hook did.",
+      "file": "demo/run.mjs",
+      "find": "ok: got.label === s.expect",
+      "replace": "ok: true",
+      "test": "node --test test/demo.test.mjs"
+    },
+    {
+      "fault": "The temp folder is left behind after the run.",
+      "file": "demo/run.mjs",
+      "find": "fs.rmSync(tmp, { recursive: true, force: true });",
+      "replace": "void tmp;",
+      "test": "node --test test/demo.test.mjs"
+    }
+  ]
+}

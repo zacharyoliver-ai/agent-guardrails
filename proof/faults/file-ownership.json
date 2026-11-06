@@ -1,0 +1,35 @@
+{
+  "name": "file-ownership",
+  "kind": "guard",
+  "what": "An agent can edit only the files its lane owns, and edits inside the lane pass.",
+  "faults": [
+    {
+      "fault": "Every edit is allowed, whatever the lane owns.",
+      "file": "hooks/file-ownership.mjs",
+      "find": "if (globs.some((g) => matchGlob(g, rel))) return null;",
+      "replace": "if (true) return null;",
+      "test": "node --test test/file-ownership.test.mjs"
+    },
+    {
+      "fault": "A lane missing from the owners file is treated as owning everything.",
+      "file": "hooks/file-ownership.mjs",
+      "find": "if (!Array.isArray(globs)) return",
+      "replace": "if (!Array.isArray(globs)) return null; if (false) return",
+      "test": "node --test test/file-ownership.test.mjs"
+    },
+    {
+      "fault": "A path outside the project folder is allowed.",
+      "file": "hooks/file-ownership.mjs",
+      "find": "if (rel === null) return `",
+      "replace": "if (rel === null) return null; if (false) return `",
+      "test": "node --test test/file-ownership.test.mjs"
+    },
+    {
+      "fault": "Every edit is refused, even inside the lane.",
+      "file": "hooks/file-ownership.mjs",
+      "find": "globs.some((g) => matchGlob(g, rel))",
+      "replace": "globs.some((g) => matchGlob(g, rel) && false)",
+      "test": "node --test test/file-ownership.test.mjs"
+    }
+  ]
+}

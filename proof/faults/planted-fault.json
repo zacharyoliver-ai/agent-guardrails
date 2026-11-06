@@ -1,0 +1,35 @@
+{
+  "name": "planted-fault",
+  "kind": "proof-tool",
+  "what": "A planted bug is reported CAUGHT only when the named test fails on it, and the file is always put back exactly as it was.",
+  "faults": [
+    {
+      "fault": "A test that still passes with the bug in place is reported as CAUGHT.",
+      "file": "bin/planted-fault.mjs",
+      "find": "return second.status === 0",
+      "replace": "return second.status !== 0",
+      "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "A test that is already red before the bug is planted is still accepted.",
+      "file": "bin/planted-fault.mjs",
+      "find": "if (first.status !== 0) {",
+      "replace": "if (false) {",
+      "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "A find text that matches more than once is accepted.",
+      "file": "bin/planted-fault.mjs",
+      "find": "if (parts.length !== 2) {",
+      "replace": "if (parts.length < 2) {",
+      "test": "node --test test/planted-fault.test.mjs"
+    },
+    {
+      "fault": "The file is left broken after the run.",
+      "file": "bin/planted-fault.mjs",
+      "find": "const restore = () => fs.writeFileSync(file, original);",
+      "replace": "const restore = () => {};",
+      "test": "node --test test/planted-fault.test.mjs"
+    }
+  ]
+}

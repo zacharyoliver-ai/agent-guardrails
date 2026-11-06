@@ -41,6 +41,18 @@ test('counts per agent_id and falls back to session_id', () => {
   assert.ok(fs.existsSync(path.join(env.GUARDRAILS_STATE_DIR, 'only-session.json')));
 });
 
+test('two agents in one session are counted separately', () => {
+  const env = envFor(tmp());
+  const as = (agent_id) => ({ session_id: 'shared', agent_id, tool_name: 'Bash', tool_input: {} });
+  for (let i = 0; i < 3; i++) {
+    assert.equal(checkStep(as('one'), env), null);
+    assert.equal(checkStep(as('two'), env), null);
+  }
+  // each is at 3 of 3 warn; a merged counter would have warned at the 4th call overall
+  assert.match(checkStep(as('one'), env), /hand-off note/);
+  assert.match(checkStep(as('two'), env), /hand-off note/);
+});
+
 test('a damaged counter file restarts at zero', () => {
   const env = envFor(tmp());
   fs.writeFileSync(path.join(env.GUARDRAILS_STATE_DIR, 'a1.json'), '{not json');

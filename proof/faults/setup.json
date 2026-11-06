@@ -1,0 +1,49 @@
+{
+  "name": "setup",
+  "kind": "coordination",
+  "what": "Setup merges the hooks into a project's settings without losing anything already there, adds each only once, and refuses a damaged file untouched.",
+  "faults": [
+    {
+      "fault": "A hook already in place is added again on every run.",
+      "file": "bin/setup.mjs",
+      "find": "if (commandsIn(groups).includes(entry.hooks[0].command)) continue;",
+      "replace": "",
+      "test": "node --test test/setup.test.mjs"
+    },
+    {
+      "fault": "Existing hooks in the project are replaced instead of kept.",
+      "file": "bin/setup.mjs",
+      "find": "next.hooks[event] = [...groups, entry];",
+      "replace": "next.hooks[event] = [entry];",
+      "test": "node --test test/setup.test.mjs"
+    },
+    {
+      "fault": "Other settings in the file are dropped.",
+      "file": "bin/setup.mjs",
+      "find": "const next = { ...settings, hooks:",
+      "replace": "const next = { hooks:",
+      "test": "node --test test/setup.test.mjs"
+    },
+    {
+      "fault": "A file that is not valid JSON is overwritten as if it were empty.",
+      "file": "bin/setup.mjs",
+      "find": "      console.error(`${file} is damaged (${err.message}). Fix it by hand; nothing was changed.`);\n      return 2;\n    }\n  }\n  let merged;",
+      "replace": "      settings = {};\n    }\n  }\n  let merged;",
+      "test": "node --test test/setup.test.mjs"
+    },
+    {
+      "fault": "A dry run still writes the file.",
+      "file": "bin/setup.mjs",
+      "find": "if (!values['dry-run']) {",
+      "replace": "if (true) {",
+      "test": "node --test test/setup.test.mjs"
+    },
+    {
+      "fault": "An unknown hook name given to --only is ignored instead of refused.",
+      "file": "bin/setup.mjs",
+      "find": "if (unknown.length || names.length === 0) {",
+      "replace": "if (names.length === 0) {",
+      "test": "node --test test/setup.test.mjs"
+    }
+  ]
+}

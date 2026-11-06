@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 602" width="820" height="602" role="img" aria-labelledby="t d">
+  <title id="t">agent-guardrails demo output</title>
+  <desc id="d">Terminal output: several tool calls an agent tried, each either denied with a reason or allowed, then a planted fault caught by the tool's own test.</desc>
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; fill: #c9d1d9; white-space: pre; }
+    .cmd { fill: #e6edf3; font-weight: 700; }
+    .head { fill: #8b98a8; font-weight: 700; }
+    .mute { fill: #7d8590; }
+    .good { fill: #56b872; font-weight: 700; }
+    .bad { fill: #f0716a; font-weight: 700; }
+  </style>
+  <rect x="1" y="1" width="818" height="600" rx="12" fill="#0f141a" stroke="#2b333d"/>
+  <circle cx="24" cy="22" r="5" fill="#f0716a" opacity="0.7"/><circle cx="42" cy="22" r="5" fill="#d9a441" opacity="0.7"/><circle cx="60" cy="22" r="5" fill="#56b872" opacity="0.7"/>
+  <text x="24" y="52" class="cmd">$ node demo/run.mjs</text>
+  <text x="24" y="94" class="head">file-ownership</text>
+  <text x="44" y="115" class="dim"><tspan class="mute">tried  </tspan><tspan>lane "api" edits src/web/app.js</tspan></text>
+  <text x="44" y="136"><tspan class="bad">DENIED</tspan><tspan class="mute">  Lane "api" does not own src/web/app.js.</tspan></text>
+  <text x="44" y="157" class="dim"><tspan class="mute">tried  </tspan><tspan>lane "api" edits src/api/users.js</tspan></text>
+  <text x="44" y="178"><tspan class="good">allowed</tspan></text>
+  <text x="24" y="199" class="head">model-ladder</text>
+  <text x="44" y="220" class="dim"><tspan class="mute">tried  </tspan><tspan>sonnet subagent sent to "Find where login is defined"</tspan></text>
+  <text x="44" y="241"><tspan class="bad">DENIED</tspan><tspan class="mute">  This reads like a lookup, and "sonnet" costs more than it needs to.</tspan></text>
+  <text x="44" y="262" class="dim"><tspan class="mute">tried  </tspan><tspan>sonnet subagent sent to "Fix the login bug"</tspan></text>
+  <text x="44" y="283"><tspan class="good">allowed</tspan></text>
+  <text x="24" y="304" class="head">git-guard</text>
+  <text x="44" y="325" class="dim"><tspan class="mute">tried  </tspan><tspan>git add -A</tspan></text>
+  <text x="44" y="346"><tspan class="bad">DENIED</tspan><tspan class="mute">  git add -A, --all and . stage everything in the repository, including oth...</tspan></text>
+  <text x="44" y="367" class="dim"><tspan class="mute">tried  </tspan><tspan>git add src/app.js</tspan></text>
+  <text x="44" y="388"><tspan class="good">allowed</tspan></text>
+  <text x="24" y="409" class="head">proof-required</text>
+  <text x="44" y="430" class="dim"><tspan class="mute">tried  </tspan><tspan>edit src/login.js, then say "Done, it works."</tspan></text>
+  <text x="44" y="451"><tspan class="bad">DENIED</tspan><tspan class="mute">  You say the work is done, but src/login.js was edited and no check ran af...</tspan></text>
+  <text x="44" y="472" class="dim"><tspan class="mute">tried  </tspan><tspan>edit src/login.js, run its test, then say "Done."</tspan></text>
+  <text x="44" y="493"><tspan class="good">allowed</tspan></text>
+  <text x="24" y="535" class="head">planted fault, run on a throwaway copy</text>
+  <text x="44" y="556" class="dim"><tspan class="mute">tried  </tspan><tspan>file-ownership: every edit allowed</tspan></text>
+  <text x="44" y="577"><tspan class="good">CAUGHT</tspan><tspan class="mute">  its own test failed, as it should</tspan></text>
+</svg>
