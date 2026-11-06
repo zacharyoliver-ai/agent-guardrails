@@ -1,12 +1,14 @@
 # agent-guardrails
 
+![Node 18 or newer](https://img.shields.io/badge/node-%3E%3D18-3c873a) ![No dependencies](https://img.shields.io/badge/dependencies-0-2f6feb) ![MIT license](https://img.shields.io/badge/license-MIT-2f6feb)
+
 Three Claude Code hooks and one CLI that keep AI coding agents inside their limits when several run at once.
 
 ![A tool call passes three hooks and is either allowed or denied with a reason](docs/how-it-works.svg)
 
 ## Why this exists
 
-Agents running in parallel spend money without limit. They edit each other's files. They pass tests that could never fail.
+Run a few coding agents at once and the same three things go wrong. One burns through your budget while nobody's watching. Two of them edit the same file. And a test passes that could never have failed.
 
 ## What is included
 
@@ -88,4 +90,4 @@ The suite covers each hook's allow and deny paths, malformed input, and runs eac
 
 MIT. See `LICENSE`.
 
-These are written from scratch, based on how we build Awnitboss, which is closed source and contributes no code here.
+Made by [Oliver Labs LLC](https://oliverlabsllc.com). These are written from scratch, based on how we build [Awnitboss](https://awnitboss.com), which is closed source and contributes no code here.
