@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkProof } from '../hooks/proof-required.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/proof-required.mjs', import.meta.url));
 let n = 0;
@@ -17,7 +17,7 @@ const person = { type: 'user', message: { role: 'user', content: 'please fix it'
 const result = { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', content: 'ok' }] } };
 
 function input(lines, finalMessage) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pr-'));
+  const dir = tmpDir('ag-pr-');
   const file = path.join(dir, 't.jsonl');
   fs.writeFileSync(file, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
   return { transcript_path: file, last_assistant_message: finalMessage, cwd: dir };

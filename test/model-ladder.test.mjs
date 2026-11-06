@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkLadder } from '../hooks/model-ladder.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/model-ladder.mjs', import.meta.url));
 const call = (description, model, tool = 'Agent') => ({
@@ -93,7 +93,7 @@ test('a read-only agent type may name a review in passing on a cheap model', () 
 });
 
 test('GUARDRAILS_LADDER overrides listed keys and keeps the rest', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-ladder-'));
+  const dir = tmpDir('ag-ladder-');
   const file = path.join(dir, 'ladder.json');
   fs.writeFileSync(file, JSON.stringify({ expensiveJobs: ['postmortem'], tiers: { cheap: ['mini'], standard: ['mid'], expensive: ['big'] } }));
   const env = { GUARDRAILS_LADDER: file };
@@ -104,7 +104,7 @@ test('GUARDRAILS_LADDER overrides listed keys and keeps the rest', () => {
 });
 
 test('a missing or damaged config file falls back to defaults with one stderr line', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-ladder-'));
+  const dir = tmpDir('ag-ladder-');
   const bad = path.join(dir, 'bad.json');
   fs.writeFileSync(bad, '{oops');
   for (const file of [bad, path.join(dir, 'missing.json')]) {

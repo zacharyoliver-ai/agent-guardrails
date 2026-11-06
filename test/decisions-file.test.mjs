@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { decisionsChange } from '../hooks/decisions-file.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/decisions-file.mjs', import.meta.url));
 const setup = (content) => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-df-'));
+  const dir = tmpDir('ag-df-');
   const file = path.join(dir, 'DECISIONS.md');
   if (content !== undefined) fs.writeFileSync(file, content);
   return { dir, file, env: { GUARDRAILS_DECISIONS_FILE: file, GUARDRAILS_STATE_DIR: path.join(dir, 'state') } };

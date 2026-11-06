@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { findPlain, scanPaths } from '../bin/plain-copy.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/plain-copy.mjs', import.meta.url));
 const phrases = (text, opts) => findPlain(text, opts).map((f) => f.phrase.toLowerCase());
@@ -73,7 +73,7 @@ test('--add and --allow adjust the list', () => {
 });
 
 test('html and jsx are scanned whole, folders are walked, other files and node_modules are skipped', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-plain-'));
+  const dir = tmpDir('ag-plain-');
   fs.mkdirSync(path.join(dir, 'node_modules'));
   fs.writeFileSync(path.join(dir, 'a.html'), '<p>A seamless thing</p>\n');
   fs.writeFileSync(path.join(dir, 'b.tsx'), 'export default () => <p>We empower you</p>;\n');
@@ -85,7 +85,7 @@ test('html and jsx are scanned whole, folders are walked, other files and node_m
 });
 
 test('cli: exit 1 with file:line, 0 when clean, 2 on bad usage', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-plain-'));
+  const dir = tmpDir('ag-plain-');
   const file = path.join(dir, 'a.md');
   fs.writeFileSync(file, 'We build it.\nIt is seamless.\n');
   const r = spawnSync(process.execPath, [script, file], { encoding: 'utf8' });

@@ -1,17 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkContracts, statusOf } from '../bin/contract-check.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/contract-check.mjs', import.meta.url));
 
 // A tiny module, a test that covers one of its behaviors, and a contract naming both.
 function project(contract) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-contract-'));
+  const dir = tmpDir('ag-contract-');
   fs.mkdirSync(path.join(dir, 'contracts'));
   fs.writeFileSync(path.join(dir, 'mod.mjs'), 'export const add = (a, b) => a + b;\nexport const neg = (a) => -a;\n');
   fs.writeFileSync(path.join(dir, 'other.mjs'), 'export const one = 1;\n');

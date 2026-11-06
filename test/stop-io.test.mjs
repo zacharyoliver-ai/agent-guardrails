@@ -5,9 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { finalText, turnLines, sendBack, addContext } from '../lib/stop-io.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 function writeTranscript(lines, raw = []) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-sio-'));
+  const dir = tmpDir('ag-sio-');
   const file = path.join(dir, 't.jsonl');
   fs.writeFileSync(file, [...lines.map((l) => JSON.stringify(l)), ...raw].join('\n') + '\n');
   return file;
@@ -87,7 +88,7 @@ import { runStop } from ${JSON.stringify(new URL('../lib/stop-io.mjs', import.me
 await runStop('probe', (i) => (i.boom ? (() => { throw new Error('bad'); })() : 'sent back'));
 `;
 function runProbe(input) {
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ag-probe-')), 'probe.mjs');
+  const file = path.join(tmpDir('ag-probe-'), 'probe.mjs');
   fs.writeFileSync(file, probe);
   return spawnSync(process.execPath, [file], { input, encoding: 'utf8' });
 }

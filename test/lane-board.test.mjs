@@ -1,18 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { ageText, buildBoard, parseWorktrees } from '../bin/lane-board.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/lane-board.mjs', import.meta.url));
 const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' };
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
 function makeRepo() {
-  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ag-lane-')));
+  const base = fs.realpathSync(tmpDir('ag-lane-'));
   const root = path.join(base, 'main');
   fs.mkdirSync(root);
   try {
@@ -126,7 +126,7 @@ test('paths use forward slashes; parseWorktrees skips bare entries; ageText', ()
 });
 
 test('not a repository is a usage error', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-lane-none-'));
+  const dir = tmpDir('ag-lane-none-');
   const r = spawnSync(process.execPath, [script, '--root', dir], { encoding: 'utf8', env: { ...env, GIT_CEILING_DIRECTORIES: path.dirname(dir) } });
   assert.equal(r.status, 2);
 });

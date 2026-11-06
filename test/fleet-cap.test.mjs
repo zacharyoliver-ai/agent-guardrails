@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkFleet } from '../hooks/fleet-cap.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/fleet-cap.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-fleet-'));
+const tmp = () => tmpDir('ag-fleet-');
 let n = 0;
 const start = (model, session = 's1', type = 'general') => ({
   session_id: session,

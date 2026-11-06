@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { buildReport, formatReport, parseSince, scanFile } from '../bin/usage-report.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/usage-report.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-usage-'));
+const tmp = () => tmpDir('ag-usage-');
 
 const line = (id, usage, extra = {}) =>
   JSON.stringify({

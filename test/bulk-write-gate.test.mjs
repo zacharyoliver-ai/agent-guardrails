@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { check, checkSql } from '../hooks/bulk-write-gate.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/bulk-write-gate.mjs', import.meta.url));
 const bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });
@@ -64,7 +64,7 @@ test('protected tables refuse any UPDATE, DELETE or ALTER', () => {
 });
 
 test('GUARDRAILS_PROTECTED_TABLES_FILE accepts a list or an object', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-bw-'));
+  const dir = tmpDir('ag-bw-');
   const list = path.join(dir, 'list.json');
   const obj = path.join(dir, 'obj.json');
   fs.writeFileSync(list, JSON.stringify(['accounts']));
@@ -149,7 +149,7 @@ test('PowerShell is read like Bash', () => {
 });
 
 test('Bash: SQL files given to a client are read', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-bw-sql-'));
+  const dir = tmpDir('ag-bw-sql-');
   fs.writeFileSync(path.join(dir, 'migrate.sql'), 'delete from t;\n');
   fs.writeFileSync(path.join(dir, 'safe.sql'), 'delete from t where id = 1;\n');
   const at = (command) => ({ ...bash(command), cwd: dir });

@@ -1,17 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { plantedFault } from '../bin/planted-fault.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const cli = fileURLToPath(new URL('../bin/planted-fault.mjs', import.meta.url));
 const MODULE = 'export const add = (a, b) => a + b;\r\nexport const twice = (a) => a + a;\r\n// café\r\n';
 
 function sample(testBody) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pf-'));
+  const dir = tmpDir('ag-pf-');
   const file = path.join(dir, 'x.mjs');
   fs.writeFileSync(file, MODULE);
   fs.writeFileSync(path.join(dir, 'x.test.mjs'), `import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport * as m from './x.mjs';\ntest('t', () => { ${testBody} });\n`);
@@ -71,7 +71,7 @@ test('cli: exit codes and usage', () => {
 
 // A fault that turns a 0 ms wait into a 20 s wait, so a leftover test process ends by itself.
 function slow() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pf-slow-'));
+  const dir = tmpDir('ag-pf-slow-');
   const file = path.join(dir, 'w.mjs');
   fs.writeFileSync(file, 'export const wait = () => new Promise((r) => setTimeout(r, 0));\n');
   fs.writeFileSync(path.join(dir, 'w.test.mjs'), "import test from 'node:test';\nimport * as m from './w.mjs';\ntest('t', async () => { await m.wait(); });\n");

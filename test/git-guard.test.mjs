@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { check } from '../hooks/git-guard.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/git-guard.mjs', import.meta.url));
 const bash = (command, cwd) => ({ tool_name: 'Bash', cwd, tool_input: { command } });
@@ -64,7 +65,7 @@ test('force pushes are denied, lease is allowed', () => {
 
 // A temp repository whose checked-out branch is `branch` (no commit needed to read it).
 function repoOn(branch) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-gg-'));
+  const dir = tmpDir('ag-gg-');
   const run = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
   run('init', '-q');
   run('symbolic-ref', 'HEAD', `refs/heads/${branch}`);
@@ -176,7 +177,7 @@ test('harmless relatives of those commands pass', () => {
 });
 
 test('worktree remove is denied while node_modules is a link', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-wt-'));
+  const root = tmpDir('ag-wt-');
   const shared = path.join(root, 'shared');
   const linked = path.join(root, 'linked');
   const plain = path.join(root, 'plain');

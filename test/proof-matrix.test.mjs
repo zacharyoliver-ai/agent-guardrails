@@ -1,18 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { runMatrix, renderProof } from '../bin/proof-matrix.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/proof-matrix.mjs', import.meta.url));
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
 // A tiny project: one module, one test that checks it, and a fault the test catches and one it cannot.
 function fixture() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pm-'));
+  const dir = tmpDir('ag-pm-');
   for (const d of ['lib', 'test', 'proof/faults']) fs.mkdirSync(path.join(dir, d), { recursive: true });
   fs.writeFileSync(path.join(dir, 'lib/add.mjs'), 'export const add = (a, b) => a + b;\nexport const unused = () => 1;\n');
   fs.writeFileSync(
@@ -49,7 +49,7 @@ test('the working tree is never changed, and the temp copy is removed', () => {
   const dir = fixture();
   const before = fs.readFileSync(path.join(dir, 'lib/add.mjs'), 'utf8');
   // A private temp folder, so a matrix running in another process can't change the count.
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pm-tmp-'));
+  const tmp = tmpDir('ag-pm-tmp-');
   const saved = { TMPDIR: process.env.TMPDIR, TEMP: process.env.TEMP, TMP: process.env.TMP };
   Object.assign(process.env, { TMPDIR: tmp, TEMP: tmp, TMP: tmp });
   try {

@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkStep } from '../hooks/step-budget.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/step-budget.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-step-'));
+const tmp = () => tmpDir('ag-step-');
 const envFor = (dir, extra = {}) => ({ GUARDRAILS_STATE_DIR: dir, GUARDRAILS_STEP_WARN: '3', GUARDRAILS_STEP_LIMIT: '5', ...extra });
 const call = (tool = 'Bash', id = 'a1') => ({ session_id: 's', agent_id: id, tool_name: tool, tool_input: {} });
 

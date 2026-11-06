@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { HOOKS } from '../lib/hook-table.mjs';
 import { render } from '../bin/gen-plugin-hooks.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const script = path.join(root, 'bin', 'gen-plugin-hooks.mjs');
@@ -46,7 +46,7 @@ test('an unknown option exits 2 and the committed file equals the render', () =>
 });
 
 test('--check exits 1 on a stale file and 0 once the generator has rewritten it', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-genhooks-'));
+  const dir = tmpDir('ag-genhooks-');
   fs.mkdirSync(path.join(dir, 'bin'));
   fs.mkdirSync(path.join(dir, 'lib'));
   fs.mkdirSync(path.join(dir, 'hooks'));

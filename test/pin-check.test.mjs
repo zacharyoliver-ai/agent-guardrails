@@ -1,17 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkPins } from '../bin/pin-check.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/pin-check.mjs', import.meta.url));
 const SENTENCE = 'You are responsible for the messages sent from your account.';
 
 function project(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-pin-'));
+  const dir = tmpDir('ag-pin-');
   for (const [rel, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
     fs.writeFileSync(path.join(dir, rel), text);

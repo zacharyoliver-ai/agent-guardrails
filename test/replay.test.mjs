@@ -5,9 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/replay.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-replay-'));
+const tmp = () => tmpDir('ag-replay-');
 
 const use = (id, name, input) => ({ type: 'tool_use', id, name, input });
 const line = (blocks, cwd = os.tmpdir()) =>

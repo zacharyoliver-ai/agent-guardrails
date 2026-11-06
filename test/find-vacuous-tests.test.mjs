@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { findVacuous, mask, scanPaths } from '../bin/find-vacuous-tests.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/find-vacuous-tests.mjs', import.meta.url));
 const ownTests = fileURLToPath(new URL('.', import.meta.url));
@@ -121,7 +121,7 @@ test('a function that merely has the name test, or a method named test, is not a
 });
 
 test('scanPaths walks folders by hand, picks only test files and skips node_modules', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-vac-'));
+  const dir = tmpDir('ag-vac-');
   fs.mkdirSync(path.join(dir, 'sub'));
   fs.mkdirSync(path.join(dir, 'node_modules'));
   const bad = "test('a', () => {});\n";
@@ -136,7 +136,7 @@ test('scanPaths walks folders by hand, picks only test files and skips node_modu
 });
 
 test('cli: exit 1 with file:line, 0 when clean, 2 on a missing path', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-vac-'));
+  const dir = tmpDir('ag-vac-');
   const file = path.join(dir, 'x.test.mjs');
   fs.writeFileSync(file, "test('a', () => {});\n");
   const r = spawnSync(process.execPath, [script, file], { encoding: 'utf8' });
@@ -150,7 +150,7 @@ test('cli: exit 1 with file:line, 0 when clean, 2 on a missing path', () => {
 });
 
 test('cli: default scan finds test/ under the working folder', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-vac-'));
+  const dir = tmpDir('ag-vac-');
   fs.mkdirSync(path.join(dir, 'test'));
   fs.writeFileSync(path.join(dir, 'test', 'x.test.mjs'), "test('a', () => {});\n");
   const r = spawnSync(process.execPath, [script], { cwd: dir, encoding: 'utf8' });

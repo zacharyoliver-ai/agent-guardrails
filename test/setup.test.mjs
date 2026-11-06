@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { mergeHooks } from '../bin/setup.mjs';
 import { HOOKS, buildHooks } from '../lib/hook-table.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../bin/setup.mjs', import.meta.url));
 const root = fileURLToPath(new URL('..', import.meta.url));
-const project = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-setup-'));
+const project = () => tmpDir('ag-setup-');
 const settingsPath = (dir) => path.join(dir, '.claude', 'settings.json');
 const setup = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 const read = (dir) => JSON.parse(fs.readFileSync(settingsPath(dir), 'utf8'));

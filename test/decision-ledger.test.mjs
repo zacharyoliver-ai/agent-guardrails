@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkStop, openDecisions, promptContext } from '../hooks/decision-ledger.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/decision-ledger.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-dl-'));
+const tmp = () => tmpDir('ag-dl-');
 const setup = () => {
   const dir = tmp();
   return { dir, env: { GUARDRAILS_LEDGER: path.join(dir, 'l.jsonl'), GUARDRAILS_STATE_DIR: path.join(dir, 'state') } };

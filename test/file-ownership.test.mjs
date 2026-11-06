@@ -7,12 +7,13 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkOwnership, relativeToCwd } from '../hooks/file-ownership.mjs';
 import { matchGlob } from '../lib/hook-io.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/file-ownership.mjs', import.meta.url));
 const owners = { lanes: { api: ['src/api/**', 'test/api/**'], web: ['src/web/**', '*.css'] } };
 
 function project() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-own-'));
+  const dir = tmpDir('ag-own-');
   fs.mkdirSync(path.join(dir, '.guardrails'));
   fs.writeFileSync(path.join(dir, '.guardrails', 'owners.json'), JSON.stringify(owners));
   return dir;
@@ -45,7 +46,7 @@ test('other tools, no lane and no owners file all allow', () => {
   const cwd = project();
   assert.equal(checkOwnership({ cwd, tool_name: 'Read', tool_input: { file_path: 'src/web/a.js' } }, api), null);
   assert.equal(checkOwnership(edit(cwd, 'src/web/a.js'), {}), null);
-  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-bare-'));
+  const bare = tmpDir('ag-bare-');
   assert.equal(checkOwnership(edit(bare, 'src/web/a.js'), api), null);
 });
 

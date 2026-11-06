@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { checkNeverSay } from '../hooks/never-say.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/never-say.mjs', import.meta.url));
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-ns-'));
+const tmp = () => tmpDir('ag-ns-');
 const rulesFile = (rules) => {
   const f = path.join(tmp(), 'rules.json');
   fs.writeFileSync(f, JSON.stringify(rules));

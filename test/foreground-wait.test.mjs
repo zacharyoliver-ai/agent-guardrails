@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { check } from '../hooks/foreground-wait.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
 const script = fileURLToPath(new URL('../hooks/foreground-wait.mjs', import.meta.url));
 const bash = (command, extra = {}) => ({ tool_name: 'Bash', tool_input: { command, ...extra } });
@@ -122,7 +123,7 @@ test('the reason says to use the background', () => {
 });
 
 test('GUARDRAILS_LONG_RUNS adds and allows by regex', () => {
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ag-fw-')), 'runs.json');
+  const file = path.join(tmpDir('ag-fw-'), 'runs.json');
   fs.writeFileSync(file, JSON.stringify({ add: ['^make all'], allow: ['^npm run build:fast'] }));
   const env = { GUARDRAILS_LONG_RUNS: file };
   assert.ok(denied('make all', env));

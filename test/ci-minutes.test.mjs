@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { billableMinutes, collectMinutes, main, paceReport, parseDocuments } from '../bin/ci-minutes.mjs';
+import { tmpDir } from '../lib/temp-dirs.mjs';
 
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-ci-'));
+const tmp = () => tmpDir('ag-ci-');
 const job = (seconds) => ({ started_at: '2026-03-01T10:00:00Z', completed_at: new Date(Date.parse('2026-03-01T10:00:00Z') + seconds * 1000).toISOString() });
 
 test('billableMinutes rounds each job up on its own', () => {
