@@ -1,0 +1,21 @@
+{
+  "name": "never-say",
+  "kind": "stop-hook",
+  "what": "A final message containing a listed line goes back once, naming the matched words, the reason and the replacement.",
+  "faults": [
+    {
+      "fault": "Every match is ignored, so nothing is ever sent back.",
+      "file": "hooks/never-say.mjs",
+      "find": "if (!m || !m[0]) continue;",
+      "replace": "if (!m || !m[0] || true) continue;",
+      "test": "node --test test/never-say.test.mjs"
+    },
+    {
+      "fault": "Fenced code and quoted lines are matched too, so quoting a listed phrase is sent back.",
+      "file": "hooks/never-say.mjs",
+      "find": "if (!fenced && !/^\\s*>/.test(line)) keep.push(line);",
+      "replace": "keep.push(line);",
+      "test": "node --test test/never-say.test.mjs"
+    }
+  ]
+}

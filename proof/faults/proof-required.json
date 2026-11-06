@@ -1,0 +1,21 @@
+{
+  "name": "proof-required",
+  "kind": "stop-hook",
+  "what": "A claim of completion after an edit needs a check command that ran after the last edit, or a plain statement that nothing was verified.",
+  "faults": [
+    {
+      "fault": "A check that ran before the last edit counts as proof.",
+      "file": "hooks/proof-required.mjs",
+      "find": "calls.slice(last + 1)",
+      "replace": "calls.slice(0)",
+      "test": "node --test test/proof-required.test.mjs"
+    },
+    {
+      "fault": "A message that admits the change was not verified is still sent back.",
+      "file": "hooks/proof-required.mjs",
+      "find": "if (!text || !CLAIM.test(text) || DISCLAIMER.test(text)) return null;",
+      "replace": "if (!text || !CLAIM.test(text)) return null;",
+      "test": "node --test test/proof-required.test.mjs"
+    }
+  ]
+}

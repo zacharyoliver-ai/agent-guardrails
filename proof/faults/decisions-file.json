@@ -1,0 +1,21 @@
+{
+  "name": "decisions-file",
+  "kind": "stop-hook",
+  "what": "A running session sees each change to the rulings file, as added and removed lines only, at its next prompt.",
+  "faults": [
+    {
+      "fault": "Removed lines are never shown.",
+      "file": "hooks/decisions-file.mjs",
+      "find": "rows.push(`- ${l}`);",
+      "replace": "void l;",
+      "test": "node --test test/decisions-file.test.mjs"
+    },
+    {
+      "fault": "The first prompt of a session prints the whole file.",
+      "file": "hooks/decisions-file.mjs",
+      "find": "if (before === null) return null;",
+      "replace": "if (before === null) before = '';",
+      "test": "node --test test/decisions-file.test.mjs"
+    }
+  ]
+}

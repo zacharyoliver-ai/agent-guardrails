@@ -1,0 +1,28 @@
+{
+  "name": "decision-ledger",
+  "kind": "stop-hook",
+  "what": "Every question marked for the person is recorded, shown again until answered, and leaves the list only by their words or a stated reason.",
+  "faults": [
+    {
+      "fault": "A question with no recommendation is never sent back.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (!missing.length || input.stop_hook_active === true) return null;",
+      "replace": "return null;",
+      "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "The same open list is shown on every prompt.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (seen.sig === sig && now - seen.shown_at < DAY) return null;",
+      "replace": "if (false) return null;",
+      "test": "node --test test/decision-ledger.test.mjs"
+    },
+    {
+      "fault": "An answer with empty words is accepted.",
+      "file": "hooks/decision-ledger.mjs",
+      "find": "if (!words) {",
+      "replace": "if (false) {",
+      "test": "node --test test/decision-ledger.test.mjs"
+    }
+  ]
+}

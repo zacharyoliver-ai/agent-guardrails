@@ -1,0 +1,26 @@
+[
+  {
+    "pattern": "\\bshould (?:now )?work\\b",
+    "flags": "i",
+    "why": "A guess about the result tells the reader nothing about what happened.",
+    "instead": "Run it and report what the run showed."
+  },
+  {
+    "pattern": "\\bI(?:'ll| will) leave (?:that|it|this) (?:to|for) you\\b",
+    "flags": "i",
+    "why": "It hands back work the agent can usually finish.",
+    "instead": "Do the step, or name the one thing only the person can do and why."
+  },
+  {
+    "pattern": "\\bI(?:'m| am) (?:fairly |pretty )?sure (?:that )?(?:it|this) (?:is|was) fine\\b",
+    "flags": "i",
+    "why": "Confidence without evidence reads as a claim.",
+    "instead": "State what was checked, or say it was not checked."
+  },
+  {
+    "pattern": "\\bunrelated to (?:my|this) change\\b",
+    "flags": "i",
+    "why": "It dismisses a failure without showing the cause.",
+    "instead": "Show the failing output and the commit or file it traces to."
+  }
+]
