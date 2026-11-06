@@ -1,0 +1,35 @@
+{
+  "name": "foreground-wait",
+  "kind": "guard",
+  "what": "A full test run, a build, a long sleep or a watcher is refused in the foreground so it can go to the background while the agent keeps working.",
+  "faults": [
+    {
+      "fault": "The limit on named test files is raised from three to thirty, so a run over many files counts as short.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "files.length > 3",
+      "replace": "files.length > 30",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A call that asks for the background is no longer recognised, so it is judged as a foreground run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "run_in_background === true",
+      "replace": "run_in_background === 'yes'",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "The sleep threshold is raised to a day, so a long sleep passes.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": ".reduce((sum, x) => sum + seconds(x), 0) >= 30",
+      "replace": ".reduce((sum, x) => sum + seconds(x), 0) >= 86400",
+      "test": "node --test test/foreground-wait.test.mjs"
+    },
+    {
+      "fault": "A single named test file is no longer enough to count as a short run.",
+      "file": "hooks/foreground-wait.mjs",
+      "find": "files.length < 1 ||",
+      "replace": "files.length < 2 ||",
+      "test": "node --test test/foreground-wait.test.mjs"
+    }
+  ]
+}

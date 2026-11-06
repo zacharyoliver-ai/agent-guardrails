@@ -1,0 +1,42 @@
+{
+  "name": "bulk-write-gate",
+  "kind": "guard",
+  "what": "A SQL write that would change every row of a table is refused unless the statement carries a bulk-ok comment with a reason.",
+  "faults": [
+    {
+      "fault": "A WHERE clause that is always true, such as 1=1, is accepted as a real filter.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (cond === null || alwaysTrue(cond))",
+      "replace": "if (cond === null)",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "The bulk-ok comment is ignored, so an approved statement is still refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (ok[i]) continue;",
+      "replace": "if (false) continue;",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "Protected tables are never matched, so their updates and deletes pass.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "const guarded = protectedTables.has(lastPart(table));",
+      "replace": "const guarded = false;",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "git commands are no longer exempt, so a commit message that mentions SQL is refused.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "new Set(['git', 'gh', 'echo'",
+      "replace": "new Set(['gh', 'echo'",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    },
+    {
+      "fault": "TRUNCATE is no longer recognised as a bulk write.",
+      "file": "hooks/bulk-write-gate.mjs",
+      "find": "if (verb === 'truncate')",
+      "replace": "if (verb === 'truncatee')",
+      "test": "node --test test/bulk-write-gate.test.mjs"
+    }
+  ]
+}

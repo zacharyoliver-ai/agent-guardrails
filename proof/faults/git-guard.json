@@ -1,0 +1,42 @@
+{
+  "name": "git-guard",
+  "kind": "guard",
+  "what": "Git commands that discard work or sweep up another agent's files in a shared repository are refused, while commands that name their paths pass.",
+  "faults": [
+    {
+      "fault": "git add . is no longer treated as staging everything.",
+      "file": "hooks/git-guard.mjs",
+      "find": "args.some((a) => a === '.' || a === '--all'",
+      "replace": "args.some((a) => a === '--all'",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "git reset --hard is no longer recognised, because the flag is misspelled in the check.",
+      "file": "hooks/git-guard.mjs",
+      "find": "has('--hard')",
+      "replace": "has('--hardd')",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "The branch-name match loses its end anchor, so pushing a branch such as main-fix is refused.",
+      "file": "hooks/git-guard.mjs",
+      "find": "(?:main|master)$/.test(target)",
+      "replace": "(?:main|master)/.test(target)",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "git stash pop is treated like a bare stash and refused.",
+      "file": "hooks/git-guard.mjs",
+      "find": "args[0] === 'push' || args[0] === 'save'",
+      "replace": "args[0] === 'push' || args[0] === 'save' || args[0] === 'pop'",
+      "test": "node --test test/git-guard.test.mjs"
+    },
+    {
+      "fault": "A forced push is only caught when the long flag is used, so -f slips through.",
+      "file": "hooks/git-guard.mjs",
+      "find": "clusterBeforeValue(a, 'o').includes('f')",
+      "replace": "clusterBeforeValue(a, 'o').includes('F')",
+      "test": "node --test test/git-guard.test.mjs"
+    }
+  ]
+}

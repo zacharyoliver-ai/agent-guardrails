@@ -1,0 +1,28 @@
+{
+  "name": "model-ladder",
+  "kind": "guard",
+  "what": "Each subagent call must name a model, and the model has to fit the job: expensive models only for listed jobs, cheap ones never for reviews, and nothing above cheap for plain lookups.",
+  "faults": [
+    {
+      "fault": "The expensive-model job check is switched off, so any job can use the expensive tier.",
+      "file": "hooks/model-ladder.mjs",
+      "find": "tier === 'expensive' && !hasWord(text, cfg.expensiveJobs)",
+      "replace": "false",
+      "test": "node --test test/model-ladder.test.mjs"
+    },
+    {
+      "fault": "Build words no longer rescue a description from the lookup rule, so \"find every caller and fix them\" is refused.",
+      "file": "hooks/model-ladder.mjs",
+      "find": "!hasWord(text, cfg.buildWords)",
+      "replace": "true",
+      "test": "node --test test/model-ladder.test.mjs"
+    },
+    {
+      "fault": "Word boundaries are dropped, so \"listen\" and \"account\" count as lookup words.",
+      "file": "hooks/model-ladder.mjs",
+      "find": "`(?<![A-Za-z0-9])${body}(?![A-Za-z0-9])`",
+      "replace": "body",
+      "test": "node --test test/model-ladder.test.mjs"
+    }
+  ]
+}

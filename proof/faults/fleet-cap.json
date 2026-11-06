@@ -1,0 +1,35 @@
+{
+  "name": "fleet-cap",
+  "kind": "guard",
+  "what": "A session never has more subagents running at once than the cap for their tier, and finished or stale subagents free their slots.",
+  "faults": [
+    {
+      "fault": "The cap is off by one, so one extra subagent gets through.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "if (running >= cap) {",
+      "replace": "if (running > cap) {",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "Entries never expire, so a crashed agent locks the session out for good.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "now - e.startedAt < ttl",
+      "replace": "true",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "SubagentStop always frees the oldest entry and ignores the subagent type.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "live.findIndex((e) => e.subagent_type === input.agent_type)",
+      "replace": "live.findIndex(() => false)",
+      "test": "node --test test/fleet-cap.test.mjs"
+    },
+    {
+      "fault": "All sessions share one state file, so their counts mix.",
+      "file": "hooks/fleet-cap.mjs",
+      "find": "`fleet-${key}.json`",
+      "replace": "'fleet-shared.json'",
+      "test": "node --test test/fleet-cap.test.mjs"
+    }
+  ]
+}
