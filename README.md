@@ -11,7 +11,7 @@ Hooks and command-line tools for running many AI coding agents at once, with a p
 
 Run a few coding agents at once and the same three things go wrong. One burns through your budget while nobody's watching. Two of them edit the same file. And a test passes that could never have failed.
 
-We build [Awnitboss](https://awnitboss.com), a production CRM, with AI agents running side by side every day. This repo is our way of working, rewritten from scratch as small tools anyone can use with Claude Code. [Results](docs/results.md) has the scale, and [Security assessments](docs/security-assessments.md) shows how the same agents assess and fix Awnitboss's security.
+We build [Awnitboss](https://awnitboss.com), a production CRM, with AI agents running side by side every day. This repo is our way of working, rewritten from scratch as small tools anyone can use with Claude Code. [Results](docs/results.md) has the scale, and [awnitboss-security](https://github.com/zacharyoliver-ai/awnitboss-security) shows how the same agents assess and fix Awnitboss's security.
 
 ## See it run
 
